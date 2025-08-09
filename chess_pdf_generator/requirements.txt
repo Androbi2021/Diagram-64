@@ -1,0 +1,14 @@
+asgiref==3.9.1
+charset-normalizer==3.4.3
+chess==1.11.2
+cssselect2==0.8.0
+Django==5.2.5
+djangorestframework==3.16.1
+lxml==6.0.0
+Pillow==11.3.0
+python-chess==1.999
+reportlab==4.4.3
+sqlparse==0.5.3
+svglib==1.5.1
+tinycss2==1.4.0
+webencodings==0.5.1
