@@ -18,5 +18,6 @@ echo "--- Installing frontend dependencies ---"
 npm install
 echo "--- Starting frontend server ---"
 /app/frontend/node_modules/.bin/vite > /tmp/frontend.log 2>&1 &
+npm run dev
 
 echo "--- Servers starting in the background ---"

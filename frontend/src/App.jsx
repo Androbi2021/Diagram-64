@@ -20,7 +20,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        '/api/diagram/generate-pdf/',
+        '/api/generate-pdf/',
         {
           fens: fenList,
           diagrams_per_page: diagramsPerPage,
@@ -81,6 +81,8 @@ function App() {
               <option value="2">2</option>
               <option value="4">4</option>
               <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
             </select>
           </div>
           <button onClick={handleGeneratePdf} className="generate-btn" disabled={loading}>
