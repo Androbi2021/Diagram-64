@@ -13,10 +13,6 @@ def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diag
     doc = SimpleDocTemplate(
         buffer,
         pagesize=PDF_CONFIG['page_size'],
-        leftMargin=PDF_CONFIG['page_margin'],
-        rightMargin=PDF_CONFIG['page_margin'],
-        topMargin=PDF_CONFIG['page_margin'],
-        bottomMargin=PDF_CONFIG['page_margin']
     )
     page_width = doc.width
     page_height = doc.height
