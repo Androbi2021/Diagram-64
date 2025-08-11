@@ -4,18 +4,20 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG
 from .utils import fen_to_drawing
-from .config import *
 
 def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diagrams_per_page']):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
     """
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=PDF_CONFIG['page_size'])
-    #doc.leftMargin = PDF_CONFIG['page_margin']
-    #doc.rightMargin = PDF_CONFIG['page_margin']
-    #doc.topMargin = PDF_CONFIG['page_margin']
-    #doc.bottomMargin = PDF_CONFIG['page_margin']
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=PDF_CONFIG['page_size'],
+        leftMargin=PDF_CONFIG['page_margin'],
+        rightMargin=PDF_CONFIG['page_margin'],
+        topMargin=PDF_CONFIG['page_margin'],
+        bottomMargin=PDF_CONFIG['page_margin']
+    )
     page_width = doc.width
     page_height = doc.height
 

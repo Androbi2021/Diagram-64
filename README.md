@@ -24,6 +24,30 @@ This is a full-stack web application that allows users to convert chess diagrams
 - **Database:**
   - SQLite (for development)
 
+## How to Run
+
+To quickly start the application for development, you can use the provided script, which sets up the environment and starts both the backend and frontend servers.
+
+1.  **Ensure you have the prerequisites installed:**
+    *   Python 3.8+
+    *   Node.js and `npm`
+
+2.  **Make the script executable:**
+    ```bash
+    chmod +x start_servers.sh
+    ```
+
+3.  **Run the start script:**
+    ```bash
+    ./start_servers.sh
+    ```
+
+4.  **Access the application:**
+    *   The frontend will be running at `http://localhost:5173`.
+    *   The backend API will be at `http://localhost:8000`.
+
+The servers will run in the background. To view logs, you can check `/tmp/backend.log` and `/tmp/frontend.log`.
+
 ## Setup and Installation
 
 Follow these instructions to set up the project for development.
