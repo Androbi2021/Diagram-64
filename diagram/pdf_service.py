@@ -2,10 +2,16 @@ from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG
+from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG, CHESS_BOARD_CONFIG
 from .utils import fen_to_drawing
 
-def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diagrams_per_page']):
+def create_pdf_from_fens(
+    fen_strings,
+    diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
+    padding=None,
+    board_colors=None,
+    columns_for_diagrams_per_page=None
+):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
     """
@@ -19,10 +25,13 @@ def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diag
 
     story = []
 
+    # Use provided layout or fallback to config
+    layout_thresholds = columns_for_diagrams_per_page or DIAGRAM_CONFIG['grid_layout_thresholds']
+
     # Define grid layout based on diagrams_per_page
-    if diagrams_per_page == DIAGRAM_CONFIG['grid_layout_thresholds']['single_column']:
+    if diagrams_per_page <= layout_thresholds.get('single_column', 1):
         cols = 1
-    elif diagrams_per_page <= DIAGRAM_CONFIG['grid_layout_thresholds']['two_column_max']:
+    elif diagrams_per_page <= layout_thresholds.get('two_column_max', 8):
         cols = 2
     else:
         cols = 3
@@ -33,11 +42,14 @@ def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diag
     # Group FEN strings into pages
     fen_groups = [fen_strings[i:i + diagrams_per_page] for i in range(0, len(fen_strings), diagrams_per_page)]
 
+    # Use provided padding or fallback to config
+    table_padding = padding or TABLE_CONFIG['padding']
+
     for group in fen_groups:
         table_data = []
         row_data = []
         for i, fen in enumerate(group):
-            drawing = fen_to_drawing(fen)
+            drawing = fen_to_drawing(fen, board_colors)
             if drawing:
                 # Scale drawing
                 scale = diagram_size / drawing.width
@@ -55,10 +67,10 @@ def create_pdf_from_fens(fen_strings, diagrams_per_page=PDF_CONFIG['default_diag
             table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['vertical']),
                 ('ALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['horizontal']),
-                ('LEFTPADDING', (0, 0), (-1, -1), TABLE_CONFIG['padding']['left']),
-                ('RIGHTPADDING', (0, 0), (-1, -1), TABLE_CONFIG['padding']['right']),
-                ('TOPPADDING', (0, 0), (-1, -1), TABLE_CONFIG['padding']['top']),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), TABLE_CONFIG['padding']['bottom']),
+                ('LEFTPADDING', (0, 0), (-1, -1), table_padding.get('left', 0)),
+                ('RIGHTPADDING', (0, 0), (-1, -1), table_padding.get('right', 0)),
+                ('TOPPADDING', (0, 0), (-1, -1), table_padding.get('top', 5)),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), table_padding.get('bottom', 5)),
             ]))
             story.append(table)
             story.append(PageBreak())
