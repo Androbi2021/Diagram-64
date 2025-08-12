@@ -9,6 +9,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 echo "--- Starting backend server ---"
+
 python manage.py runserver > /tmp/backend.log 2>&1 &
 
 # --- Frontend Setup ---
@@ -17,6 +18,9 @@ cd frontend
 echo "--- Installing frontend dependencies ---"
 npm install
 echo "--- Starting frontend server ---"
-/app/frontend/node_modules/.bin/vite > /tmp/frontend.log 2>&1 &
 
+npm run dev > /tmp/frontend.log 2>&1 &
+
+cd ..
 echo "--- Servers starting in the background ---"
+echo "--- Logs available in /tmp/backend.log and /tmp/frontend.log ---"

@@ -12,6 +12,7 @@ def fen_to_drawing(fen_string, board_colors=None):
     # Create a chess board from the FEN string
     board = chess.Board(fen_string)
 
+
     # Use provided colors or fallback to config
     colors = board_colors or CHESS_BOARD_CONFIG['colors']
 
@@ -20,7 +21,10 @@ def fen_to_drawing(fen_string, board_colors=None):
         board=board,
         size=CHESS_BOARD_CONFIG['size'],
         coordinates=CHESS_BOARD_CONFIG['coordinates'],
-        colors=colors
+        colors={
+            "square light": colors["light_squares"],  # light square color
+            "square dark": colors["dark_squares"]  # dark square color
+        }
     )
 
     # Use a StringIO object to simulate a file for svglib
