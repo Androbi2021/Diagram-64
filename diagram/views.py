@@ -13,6 +13,9 @@ class GeneratePdfApiView(APIView):
     def post(self, request, *args, **kwargs):
         fen_strings = request.data.get('fens')
         diagrams_per_page = request.data.get('diagrams_per_page', 1)
+        padding = request.data.get('padding')
+        board_colors = request.data.get('board_colors')
+        columns_for_diagrams_per_page = request.data.get('columns_for_diagrams_per_page')
 
         if not fen_strings or not isinstance(fen_strings, list):
             return Response(
@@ -30,7 +33,13 @@ class GeneratePdfApiView(APIView):
             )
 
         try:
-            pdf_data = create_pdf_from_fens(fen_strings, diagrams_per_page)
+            pdf_data = create_pdf_from_fens(
+                fen_strings,
+                diagrams_per_page,
+                padding,
+                board_colors,
+                columns_for_diagrams_per_page
+            )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
             response['Content-Disposition'] = 'attachment; filename="chess_diagrams.pdf"'

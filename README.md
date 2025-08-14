@@ -1,12 +1,15 @@
 # Chess Diagram PDF Generator
 
-This is a full-stack web application that allows users to convert chess diagrams from Forsyth-Edwards Notation (FEN) into a downloadable PDF file. Users can input multiple FEN strings and customize the number of diagrams that appear on each page of the PDF.
+This is a full-stack web application that allows users to convert chess diagrams from Forsyth-Edwards Notation (FEN) into a downloadable PDF file. Users can input multiple FEN strings and customize various options for the PDF output.
 
 ## Features
 
 - **FEN to PDF Conversion:** Converts standard FEN strings into visual chess diagrams.
-- **Custom Layout:** Allows users to choose the number of diagrams per page (1, 2, 4, or 6).
+- **Custom Layout:** Allows users to choose the number of diagrams per page.
 - **Grid Arrangement:** Automatically arranges diagrams in a clean grid layout within the PDF.
+- **Custom Spacing:** Control the amount of space between diagrams.
+- **Custom Colors:** Change the colors of the light and dark squares on the chess board.
+- **Custom Column Layout:** Define the number of columns based on the number of diagrams per page.
 - **REST API:** A Django-based backend provides a simple API for the conversion.
 - **Modern Frontend:** A responsive and easy-to-use interface built with React and Vite.
 
@@ -114,6 +117,10 @@ Follow these instructions to set up the project for development.
 
 1.  Open your browser and navigate to the frontend URL (e.g., `http://localhost:5173`).
 2.  In the text area, enter one or more FEN strings, with each FEN on a new line.
-3.  Select the desired number of diagrams per page from the dropdown menu.
+3.  Adjust the settings to your liking:
+    - **Diagrams per page:** Set the number of diagrams on each page.
+    - **Space between diagrams:** Control the padding around each diagram.
+    - **Light/Dark square color:** Choose custom colors for the board.
+    - **Column Layout Rules:** Adjust the thresholds for using 1, 2, or 3 columns.
 4.  Click the "Generate PDF" button.
 5.  A PDF file named `chess_diagrams.pdf` will be generated and downloaded by your browser.
