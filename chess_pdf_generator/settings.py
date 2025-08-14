@@ -59,7 +59,7 @@ ROOT_URLCONF = "chess_pdf_generator.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, 'frontend', 'dist')],
+        "DIRS": [os.path.join(BASE_DIR, 'frontend', 'dist'), os.path.join(BASE_DIR, 'frontend')],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

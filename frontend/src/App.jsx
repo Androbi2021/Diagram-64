@@ -8,6 +8,7 @@ function App() {
   const [padding, setPadding] = useState(5);
   const [lightSquares, setLightSquares] = useState('#f0d9b5');
   const [darkSquares, setDarkSquares] = useState('#b58863');
+  const [borderColor, setBorderColor] = useState('#ffffffff');
   const [singleColumn, setSingleColumn] = useState(1);
   const [twoColumnMax, setTwoColumnMax] = useState(8);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ function App() {
           board_colors: {
             light_squares: lightSquares,
             dark_squares: darkSquares,
+            border_color: borderColor,
           },
           columns_for_diagrams_per_page: {
             single_column: singleColumn,
@@ -122,6 +124,15 @@ function App() {
               id="dark-squares"
               value={darkSquares}
               onChange={(e) => setDarkSquares(e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="border-color">Border color:</label>
+            <input
+              type="color"
+              id="border-color"
+              value={borderColor}
+              onChange={(e) => setBorderColor(e.target.value)}
             />
           </div>
           <div className="form-group">

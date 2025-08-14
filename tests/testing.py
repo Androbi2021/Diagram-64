@@ -86,12 +86,13 @@ def log_message(message, header=False):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f"[{timestamp}] {message}")
 
-def run_test(test_name, fen_list, diagrams_per_page):
+def run_test(test_name, fen_list, diagrams_per_page, **kwargs):
     """Generic function to run a test case and store its result."""
-    log_message(f"Running test: '{test_name}' ({diagrams_per_page} per page)", header=True)
+    border_color_info = f" with border color {kwargs.get('border_color')}" if kwargs.get('border_color') else ""
+    log_message(f"Running test: '{test_name}' ({diagrams_per_page} per page){border_color_info}", header=True)
     start_time = time.time()
     result = {
-        "name": f"{test_name} ({diagrams_per_page}/page)",
+        "name": f"{test_name} ({diagrams_per_page}/page){border_color_info}",
         "status": "Failed",
         "duration": 0,
         "file_size": 0,
@@ -100,7 +101,13 @@ def run_test(test_name, fen_list, diagrams_per_page):
     }
     
     try:
-        pdf_data = create_pdf_from_fens(fen_list, diagrams_per_page=diagrams_per_page)
+        # Get border_color from kwargs if present
+        border_color = kwargs.get('border_color')
+        pdf_data = create_pdf_from_fens(
+            fen_list,
+            diagrams_per_page=diagrams_per_page,
+            border_color=border_color
+        )
         duration = time.time() - start_time
         result["duration"] = duration
         
@@ -185,6 +192,14 @@ def main():
     
     # 3. Performance Tests (using all valid FENs)
     run_test("Performance", all_valid_fens, diagrams_per_page=8)
+
+    # 4. Border Color Test
+    run_test(
+        "Border Color Override",
+        [standard_positions["starting_pos"], standard_positions["ruy_lopez"]],
+        diagrams_per_page=2,
+        border_color="#FF0000"  # Red border
+    )
 
     # --- Report Generation ---
     generate_summary_report()

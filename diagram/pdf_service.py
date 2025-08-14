@@ -10,7 +10,8 @@ def create_pdf_from_fens(
     diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
     padding=None,
     board_colors=None,
-    columns_for_diagrams_per_page=None
+    columns_for_diagrams_per_page=None,
+    border_color=None,
 ):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
@@ -49,7 +50,7 @@ def create_pdf_from_fens(
         table_data = []
         row_data = []
         for i, fen in enumerate(group):
-            drawing = fen_to_drawing(fen, board_colors)
+            drawing = fen_to_drawing(fen, board_colors, border_color)
             if drawing:
                 # Scale drawing
                 scale = diagram_size / drawing.width
