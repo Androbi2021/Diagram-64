@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, PageBreak
 from reportlab.lib import colors
@@ -5,13 +6,14 @@ from reportlab.lib.pagesizes import A4
 from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG, CHESS_BOARD_CONFIG
 from .utils import fen_to_drawing
 
+logger = logging.getLogger(__name__)
+
 def create_pdf_from_fens(
     fen_strings,
     diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
     padding=None,
     board_colors=None,
     columns_for_diagrams_per_page=None,
-    border_color=None,
 ):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
@@ -50,7 +52,7 @@ def create_pdf_from_fens(
         table_data = []
         row_data = []
         for i, fen in enumerate(group):
-            drawing = fen_to_drawing(fen, board_colors, border_color)
+            drawing = fen_to_drawing(fen, board_colors)
             if drawing:
                 # Scale drawing
                 scale = diagram_size / drawing.width

@@ -1,55 +1,71 @@
 import { useState } from 'react';
 import axios from 'axios';
-import './App.css';
+import {
+  Layout,
+  Form,
+  Input,
+  InputNumber,
+  Button,
+  ColorPicker,
+  Spin,
+  Row,
+  Col,
+  Card,
+  Typography,
+  notification,
+} from 'antd';
+
+const { Header, Content } = Layout;
+const { Title } = Typography;
+const { TextArea } = Input;
 
 function App() {
-  const [fens, setFens] = useState('');
-  const [diagramsPerPage, setDiagramsPerPage] = useState(6);
-  const [padding, setPadding] = useState(5);
-  const [lightSquares, setLightSquares] = useState('#f0d9b5');
-  const [darkSquares, setDarkSquares] = useState('#b58863');
-  const [borderColor, setBorderColor] = useState('#ffffffff');
-  const [singleColumn, setSingleColumn] = useState(1);
-  const [twoColumnMax, setTwoColumnMax] = useState(8);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [form] = Form.useForm();
 
-  const handleGeneratePdf = async () => {
-    const fenList = fens.split('\n').filter(fen => fen.trim() !== '');
+  const handleGeneratePdf = async (values) => {
+    const fenList = values.fens.split('\n').filter((fen) => fen.trim() !== '');
     if (fenList.length === 0) {
-      setError('Please enter at least one FEN string.');
+      notification.error({
+        message: 'Validation Error',
+        description: 'Please enter at least one FEN string.',
+      });
       return;
     }
 
     setLoading(true);
-    setError(null);
+
+    const getColorString = (colorValue) => {
+      if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
+        return colorValue.toHexString();
+      }
+      return colorValue;
+    };
+
+    const payload = {
+      fens: fenList,
+      diagrams_per_page: values.diagramsPerPage,
+      padding: {
+        top: values.padding,
+        bottom: values.padding,
+        left: values.padding,
+        right: values.padding,
+      },
+      board_colors: {
+        light_squares: getColorString(values.lightSquares),
+        dark_squares: getColorString(values.darkSquares),
+        border_color: getColorString(values.borderColor),
+      },
+      columns_for_diagrams_per_page: {
+        single_column: values.singleColumn,
+        two_column_max: values.twoColumnMax,
+      },
+    };
 
     try {
-      const response = await axios.post(
-        '/api/generate-pdf/',
-        {
-          fens: fenList,
-          diagrams_per_page: diagramsPerPage,
-          padding: {
-            top: padding,
-            bottom: padding,
-            left: padding,
-            right: padding,
-          },
-          board_colors: {
-            light_squares: lightSquares,
-            dark_squares: darkSquares,
-            border_color: borderColor,
-          },
-          columns_for_diagrams_per_page: {
-            single_column: singleColumn,
-            two_column_max: twoColumnMax,
-          },
-        },
-        {
-          responseType: 'blob',
-        }
-      );
+      const response = await axios.post('/api/generate-pdf/', payload, {
+        responseType: 'blob',
+      });
 
       const file = new Blob([response.data], { type: 'application/pdf' });
       const fileURL = URL.createObjectURL(file);
@@ -63,111 +79,126 @@ function App() {
       link.parentNode.removeChild(link);
       URL.revokeObjectURL(fileURL);
 
+      notification.success({
+        message: 'PDF Generated',
+        description: 'Your chess diagram PDF has been successfully generated.',
+      });
     } catch (err) {
-      setError('An error occurred while generating the PDF.');
-      console.error(err);
+      let errorMessage = 'An unexpected error occurred.';
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      notification.error({
+        message: 'Error Generating PDF',
+        description: errorMessage,
+        duration: 10,
+      });
+
+      console.error('Full error object:', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Chess Diagram PDF Generator</h1>
-      </header>
-      <main>
-        <div className="form-container">
-          <div className="form-group">
-            <label htmlFor="fen-input">Enter FEN strings (one per line):</label>
-            <textarea
-              id="fen-input"
-              value={fens}
-              onChange={(e) => setFens(e.target.value)}
-              rows="10"
-              placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="diagrams-per-page">Diagrams per page:</label>
-            <input
-              type="number"
-              id="diagrams-per-page"
-              value={diagramsPerPage}
-              onChange={(e) => setDiagramsPerPage(Number(e.target.value))}
-              min="1"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="padding">Space between diagrams (points):</label>
-            <input
-              type="number"
-              id="padding"
-              value={padding}
-              onChange={(e) => setPadding(Number(e.target.value))}
-              min="0"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="light-squares">Light square color:</label>
-            <input
-              type="color"
-              id="light-squares"
-              value={lightSquares}
-              onChange={(e) => setLightSquares(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="dark-squares">Dark square color:</label>
-            <input
-              type="color"
-              id="dark-squares"
-              value={darkSquares}
-              onChange={(e) => setDarkSquares(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="border-color">Border color:</label>
-            <input
-              type="color"
-              id="border-color"
-              value={borderColor}
-              onChange={(e) => setBorderColor(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>Column Layout Rules:</label>
-            <div>
-              <label htmlFor="single-column" style={{ marginRight: '10px' }}>Single column if diagrams ≤</label>
-              <input
-                type="number"
-                id="single-column"
-                value={singleColumn}
-                onChange={(e) => setSingleColumn(Number(e.target.value))}
-                min="1"
-                style={{ width: '60px' }}
-              />
-            </div>
-            <div>
-              <label htmlFor="two-column-max" style={{ marginRight: '10px' }}>Two columns if diagrams ≤</label>
-              <input
-                type="number"
-                id="two-column-max"
-                value={twoColumnMax}
-                onChange={(e) => setTwoColumnMax(Number(e.target.value))}
-                min="1"
-                style={{ width: '60px' }}
-              />
-            </div>
-            <small>Otherwise, three columns will be used.</small>
-          </div>
-          <button onClick={handleGeneratePdf} className="generate-btn" disabled={loading}>
-            {loading ? 'Generating...' : 'Generate PDF'}
-          </button>
-          {error && <p className="error-message">{error}</p>}
-        </div>
-      </main>
-    </div>
+    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
+      <Header style={{ background: '#001529', padding: '0 24px' }}>
+        <Title level={2} style={{ color: 'white', lineHeight: '64px', margin: 0 }}>
+          Chess Diagram PDF Generator
+        </Title>
+      </Header>
+      <Content style={{ padding: '24px' }}>
+        <Row justify="center">
+          <Col xs={24} sm={20} md={16} lg={12} xl={10}>
+            <Card>
+              <Spin spinning={loading} tip="Generating PDF...">
+                <Form
+                  form={form}
+                  layout="vertical"
+                  onFinish={handleGeneratePdf}
+                  initialValues={{
+                    fens: '',
+                    diagramsPerPage: 6,
+                    padding: 5,
+                    lightSquares: '#f0d9b5',
+                    darkSquares: '#b58863',
+                    borderColor: '#ffffffff',
+                    singleColumn: 1,
+                    twoColumnMax: 8,
+                  }}
+                >
+                  <Form.Item
+                    name="fens"
+                    label="Enter FEN strings (one per line):"
+                    rules={[{ required: true, message: 'Please input at least one FEN string!' }]}
+                  >
+                    <TextArea
+                      rows={10}
+                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                      style={{ fontFamily: "'Courier New', Courier, monospace" }}
+                    />
+                  </Form.Item>
+
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Form.Item name="diagramsPerPage" label="Diagrams per page:" rules={[{ required: true }]}>
+                        <InputNumber min={1} style={{ width: '100%' }} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Form.Item name="padding" label="Space between diagrams (pt):" rules={[{ required: true }]}>
+                        <InputNumber min={0} style={{ width: '100%' }} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={16}>
+                    <Col xs={8}>
+                      <Form.Item name="lightSquares" label="Light squares">
+                        <ColorPicker showText />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={8}>
+                      <Form.Item name="darkSquares" label="Dark squares">
+                        <ColorPicker showText />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={8}>
+                      <Form.Item name="borderColor" label="Border">
+                        <ColorPicker showText />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  
+                  <Typography.Text strong>Column Layout Rules</Typography.Text>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="singleColumn" label="Single column if ≤" tooltip="Max diagrams for a single-column layout.">
+                        <InputNumber min={1} style={{ width: '100%' }} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="twoColumnMax" label="Two columns if ≤" tooltip="Max diagrams for a two-column layout.">
+                        <InputNumber min={1} style={{ width: '100%' }} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+
+                  <Form.Item style={{ marginTop: '24px' }}>
+                    <Button type="primary" htmlType="submit" block loading={loading} size="large">
+                      Generate PDF
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </Spin>
+            </Card>
+          </Col>
+        </Row>
+      </Content>
+    </Layout>
   );
 }
 

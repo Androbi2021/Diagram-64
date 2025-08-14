@@ -39,6 +39,7 @@ TABLE_CONFIG = {
 CHESS_BOARD_CONFIG = {
     'size': 390,  # Size of the chess board SVG in pixels.
     'coordinates': True,  # Whether to display coordinates on the board.
+    'coord': "#000000",
     'colors': {
         'light_squares': '#f0d9b5',  # Color for light squares on the board.
         'dark_squares': '#b58863'   # Color for dark squares on the board.
