@@ -61,9 +61,9 @@ function App() {
             right: padding,
           },
           board_colors: {
-            light_squares: lightSquares.toHexString(),
-            dark_squares: darkSquares.toHexString(),
-            border_color: borderColor.toHexString(),
+            light_squares: lightSquares,
+            dark_squares: darkSquares,
+            border_color: borderColor,
           },
           columns_for_diagrams_per_page: {
             single_column: singleColumn,
@@ -92,12 +92,28 @@ function App() {
         description: 'Your chess diagram PDF has been successfully generated.',
       });
     } catch (err) {
+      const errorData = err.response?.data;
+      const errorMessage =
+        errorData && typeof errorData === 'object'
+          ? JSON.stringify(errorData)
+          : 'An unexpected error occurred. Please check the console for more details.';
+
       notification.error({
-        message: 'Error',
-        description:
-          'An error occurred while generating the PDF. Please try again.',
+        message: 'Error Generating PDF',
+        description: errorMessage,
+        duration: 10,
       });
-      console.error(err);
+
+      console.error('Full error object:', err);
+      if (err.response) {
+        console.error('Error response data:', err.response.data);
+        console.error('Error response status:', err.response.status);
+        console.error('Error response headers:', err.response.headers);
+      } else if (err.request) {
+        console.error('Error request:', err.request);
+      } else {
+        console.error('Error message:', err.message);
+      }
     } finally {
       setLoading(false);
     }
