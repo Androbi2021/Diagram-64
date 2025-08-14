@@ -8,13 +8,11 @@ import {
   Button,
   ColorPicker,
   Spin,
-  Alert,
   Row,
   Col,
   Card,
   Typography,
   notification,
-  Space,
 } from 'antd';
 
 const { Header, Content } = Layout;
@@ -26,18 +24,7 @@ function App() {
   const [form] = Form.useForm();
 
   const handleGeneratePdf = async (values) => {
-    const {
-      fens,
-      diagramsPerPage,
-      padding,
-      lightSquares,
-      darkSquares,
-      borderColor,
-      singleColumn,
-      twoColumnMax,
-    } = values;
-
-    const fenList = fens.split('\n').filter((fen) => fen.trim() !== '');
+    const fenList = values.fens.split('\n').filter((fen) => fen.trim() !== '');
     if (fenList.length === 0) {
       notification.error({
         message: 'Validation Error',
@@ -48,32 +35,37 @@ function App() {
 
     setLoading(true);
 
+    const getColorString = (colorValue) => {
+      if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
+        return colorValue.toHexString();
+      }
+      return colorValue;
+    };
+
+    const payload = {
+      fens: fenList,
+      diagrams_per_page: values.diagramsPerPage,
+      padding: {
+        top: values.padding,
+        bottom: values.padding,
+        left: values.padding,
+        right: values.padding,
+      },
+      board_colors: {
+        light_squares: getColorString(values.lightSquares),
+        dark_squares: getColorString(values.darkSquares),
+        border_color: getColorString(values.borderColor),
+      },
+      columns_for_diagrams_per_page: {
+        single_column: values.singleColumn,
+        two_column_max: values.twoColumnMax,
+      },
+    };
+
     try {
-      const response = await axios.post(
-        '/api/generate-pdf/',
-        {
-          fens: fenList,
-          diagrams_per_page: diagramsPerPage,
-          padding: {
-            top: padding,
-            bottom: padding,
-            left: padding,
-            right: padding,
-          },
-          board_colors: {
-            light_squares: lightSquares,
-            dark_squares: darkSquares,
-            border_color: borderColor,
-          },
-          columns_for_diagrams_per_page: {
-            single_column: singleColumn,
-            two_column_max: twoColumnMax,
-          },
-        },
-        {
-          responseType: 'blob',
-        }
-      );
+      const response = await axios.post('/api/generate-pdf/', payload, {
+        responseType: 'blob',
+      });
 
       const file = new Blob([response.data], { type: 'application/pdf' });
       const fileURL = URL.createObjectURL(file);
@@ -92,11 +84,12 @@ function App() {
         description: 'Your chess diagram PDF has been successfully generated.',
       });
     } catch (err) {
-      const errorData = err.response?.data;
-      const errorMessage =
-        errorData && typeof errorData === 'object'
-          ? JSON.stringify(errorData)
-          : 'An unexpected error occurred. Please check the console for more details.';
+      let errorMessage = 'An unexpected error occurred.';
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
 
       notification.error({
         message: 'Error Generating PDF',
@@ -105,22 +98,13 @@ function App() {
       });
 
       console.error('Full error object:', err);
-      if (err.response) {
-        console.error('Error response data:', err.response.data);
-        console.error('Error response status:', err.response.status);
-        console.error('Error response headers:', err.response.headers);
-      } else if (err.request) {
-        console.error('Error request:', err.request);
-      } else {
-        console.error('Error message:', err.message);
-      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
       <Header style={{ background: '#001529', padding: '0 24px' }}>
         <Title level={2} style={{ color: 'white', lineHeight: '64px', margin: 0 }}>
           Chess Diagram PDF Generator
@@ -149,12 +133,7 @@ function App() {
                   <Form.Item
                     name="fens"
                     label="Enter FEN strings (one per line):"
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Please input at least one FEN string!',
-                      },
-                    ]}
+                    rules={[{ required: true, message: 'Please input at least one FEN string!' }]}
                   >
                     <TextArea
                       rows={10}
@@ -163,79 +142,53 @@ function App() {
                     />
                   </Form.Item>
 
-                  <Row gutter={16} align="bottom">
-                    <Col span={12}>
-                      <Form.Item
-                        name="diagramsPerPage"
-                        label="Diagrams per page:"
-                        rules={[
-                          {
-                            required: true,
-                            message: 'This field is required',
-                          },
-                        ]}
-                      >
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Form.Item name="diagramsPerPage" label="Diagrams per page:" rules={[{ required: true }]}>
                         <InputNumber min={1} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
-                    <Col span={12}>
-                      <Form.Item
-                        name="padding"
-                        label="Space between diagrams (points):"
-                        rules={[
-                          {
-                            required: true,
-                            message: 'This field is required',
-                          },
-                        ]}
-                      >
+                    <Col xs={24} sm={12}>
+                      <Form.Item name="padding" label="Space between diagrams (pt):" rules={[{ required: true }]}>
                         <InputNumber min={0} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  <Row gutter={16} align="bottom">
-                    <Col span={8}>
-                      <Form.Item name="lightSquares" label="Light square color:">
-                        <ColorPicker />
+                  <Row gutter={16}>
+                    <Col xs={8}>
+                      <Form.Item name="lightSquares" label="Light squares">
+                        <ColorPicker showText />
                       </Form.Item>
                     </Col>
-                    <Col span={8}>
-                      <Form.Item name="darkSquares" label="Dark square color:">
-                        <ColorPicker />
+                    <Col xs={8}>
+                      <Form.Item name="darkSquares" label="Dark squares">
+                        <ColorPicker showText />
                       </Form.Item>
                     </Col>
-                    <Col span={8}>
-                      <Form.Item name="borderColor" label="Border color:">
-                        <ColorPicker />
+                    <Col xs={8}>
+                      <Form.Item name="borderColor" label="Border">
+                        <ColorPicker showText />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  
+                  <Typography.Text strong>Column Layout Rules</Typography.Text>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item name="singleColumn" label="Single column if ≤" tooltip="Max diagrams for a single-column layout.">
+                        <InputNumber min={1} style={{ width: '100%' }} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="twoColumnMax" label="Two columns if ≤" tooltip="Max diagrams for a two-column layout.">
+                        <InputNumber min={1} style={{ width: '100%' }} />
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  <Form.Item label="Column Layout Rules:">
-                    <Space>
-                      <Form.Item
-                        name="singleColumn"
-                        label="Single column if diagrams ≤"
-                        noStyle
-                      >
-                        <InputNumber min={1} />
-                      </Form.Item>
-                      <Form.Item
-                        name="twoColumnMax"
-                        label="Two columns if diagrams ≤"
-                        noStyle
-                      >
-                        <InputNumber min={1} />
-                      </Form.Item>
-                    </Space>
-                    <div>
-                      <small>Otherwise, three columns will be used.</small>
-                    </div>
-                  </Form.Item>
-
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" block>
+                  <Form.Item style={{ marginTop: '24px' }}>
+                    <Button type="primary" htmlType="submit" block loading={loading} size="large">
                       Generate PDF
                     </Button>
                   </Form.Item>
