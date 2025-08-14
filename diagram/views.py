@@ -33,12 +33,14 @@ class GeneratePdfApiView(APIView):
             )
 
         try:
+            border_color = board_colors.get('border_color') if board_colors else None
             pdf_data = create_pdf_from_fens(
                 fen_strings,
                 diagrams_per_page,
                 padding,
                 board_colors,
-                columns_for_diagrams_per_page
+                columns_for_diagrams_per_page,
+                border_color,
             )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
