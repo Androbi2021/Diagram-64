@@ -88,11 +88,21 @@ def log_message(message, header=False):
 
 def run_test(test_name, fen_list, diagrams_per_page, **kwargs):
     """Generic function to run a test case and store its result."""
-    border_color_info = f" with border color {kwargs.get('border_color')}" if kwargs.get('border_color') else ""
-    log_message(f"Running test: '{test_name}' ({diagrams_per_page} per page){border_color_info}", header=True)
+    
+    # --- Build a descriptive string for logs based on kwargs ---
+    options_desc = []
+    if kwargs.get('title'):
+        options_desc.append(f"title='{kwargs['title']}'")
+    if kwargs.get('border_color'):
+        options_desc.append(f"border_color='{kwargs['border_color']}'")
+    
+    options_str = f" with options ({', '.join(options_desc)})" if options_desc else ""
+
+    log_message(f"Running test: '{test_name}' ({diagrams_per_page} per page){options_str}", header=True)
     start_time = time.time()
+    
     result = {
-        "name": f"{test_name} ({diagrams_per_page}/page){border_color_info}",
+        "name": f"{test_name} ({diagrams_per_page}/page){options_str}",
         "status": "Failed",
         "duration": 0,
         "file_size": 0,
@@ -101,18 +111,19 @@ def run_test(test_name, fen_list, diagrams_per_page, **kwargs):
     }
     
     try:
-        # Get border_color from kwargs if present
-        border_color = kwargs.get('border_color')
+        # --- Pass all kwargs directly to the function ---
         pdf_data = create_pdf_from_fens(
             fen_list,
             diagrams_per_page=diagrams_per_page,
-            border_color=border_color
+            **kwargs  # Unpacks dict: title="...", border_color="..."
         )
         duration = time.time() - start_time
         result["duration"] = duration
         
         if pdf_data:
-            file_name = f"{test_name.replace(' ', '_').lower()}_{diagrams_per_page}_per_page.pdf"
+            # Sanitize filename from test name
+            safe_name = test_name.replace(' ', '_').lower()
+            file_name = f"{safe_name}_{diagrams_per_page}_per_page.pdf"
             file_path = os.path.join(OUTPUT_DIR, file_name)
             
             with open(file_path, "wb") as f:
@@ -125,7 +136,7 @@ def run_test(test_name, fen_list, diagrams_per_page, **kwargs):
                 "path": file_path
             })
             log_message(f"Successfully created PDF: {file_path} ({file_size:.2f} KB)")
-            #open_file(file_path)
+            # open_file(file_path)
         else:
             result["error"] = "No PDF data was generated."
             log_message("Test failed: No PDF data was generated.")
@@ -134,10 +145,9 @@ def run_test(test_name, fen_list, diagrams_per_page, **kwargs):
         duration = time.time() - start_time
         result["duration"] = duration
         result["error"] = str(e)
-        log_message(f"Test failed after {duration:.4f} seconds with an exception: {e}", )
+        log_message(f"Test failed after {duration:.4f} seconds with an exception: {e}")
     
     test_results.append(result)
-
 
 def open_file(path):
     """Opens a file in the default system viewer."""
@@ -199,6 +209,14 @@ def main():
         [standard_positions["starting_pos"], standard_positions["ruy_lopez"]],
         diagrams_per_page=2,
         border_color="#FF0000"  # Red border
+    )
+
+    # 5. Title Test
+    run_test(
+        "Document With Title",
+        [standard_positions["starting_pos"], standard_positions["scholars_mate"]],
+        diagrams_per_page=2,
+        title="Official FIDE Positions Report"
     )
 
     # --- Report Generation ---

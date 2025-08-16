@@ -60,6 +60,7 @@ function App() {
         single_column: values.singleColumn,
         two_column_max: values.twoColumnMax,
       },
+      title: values.title,
     };
 
     try {
@@ -120,6 +121,7 @@ function App() {
                   layout="vertical"
                   onFinish={handleGeneratePdf}
                   initialValues={{
+                    title: '',
                     fens: '',
                     diagramsPerPage: 6,
                     padding: 5,
@@ -130,6 +132,18 @@ function App() {
                     twoColumnMax: 8,
                   }}
                 >
+                  <Form.Item
+                    name="title"
+                    label="Enter the title of your PDF (facultative):"
+                    rules={[{ required: false}]}
+                  >
+                    <TextArea
+                      rows={1}
+                      placeholder="My PDF title"
+                      style={{ fontFamily: "Arial" }}
+                    />
+                  </Form.Item>
+
                   <Form.Item
                     name="fens"
                     label="Enter FEN strings (one per line):"
