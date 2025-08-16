@@ -1,6 +1,7 @@
 import logging
 from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, PageBreak, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG, CHESS_BOARD_CONFIG
@@ -14,6 +15,7 @@ def create_pdf_from_fens(
     padding=None,
     board_colors=None,
     columns_for_diagrams_per_page=None,
+    title=None
 ):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
@@ -27,6 +29,10 @@ def create_pdf_from_fens(
     page_height = doc.height
 
     story = []
+    styles = getSampleStyleSheet()
+
+    if title:
+        story.append(Paragraph(title, styles['h1']))
 
     # Use provided layout or fallback to config
     layout_thresholds = columns_for_diagrams_per_page or DIAGRAM_CONFIG['grid_layout_thresholds']
@@ -40,7 +46,7 @@ def create_pdf_from_fens(
         cols = 3
 
     diagram_size = DIAGRAM_CONFIG['default_size']
-    diagram_size = min(diagram_size, page_width / cols - 10, page_height/((diagrams_per_page + cols) // cols))  # Ensure diagrams fit within page width
+    diagram_size = min(diagram_size, page_width / cols - 10, page_height/((diagrams_per_page + cols - 1) // cols))  # Ensure diagrams fit within page width
 
     # Group FEN strings into pages
     fen_groups = [fen_strings[i:i + diagrams_per_page] for i in range(0, len(fen_strings), diagrams_per_page)]

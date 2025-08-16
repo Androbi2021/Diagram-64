@@ -20,6 +20,7 @@ class GeneratePdfApiView(APIView):
         padding = request.data.get('padding')
         board_colors = request.data.get('board_colors')
         columns_for_diagrams_per_page = request.data.get('columns_for_diagrams_per_page')
+        title = request.data.get('title')
         
 
         if not fen_strings or not isinstance(fen_strings, list):
@@ -38,13 +39,13 @@ class GeneratePdfApiView(APIView):
             )
 
         try:
-            border_color = board_colors.get('border_color') if board_colors else None
             pdf_data = create_pdf_from_fens(
                 fen_strings,
                 diagrams_per_page,
                 padding,
                 board_colors,
-                columns_for_diagrams_per_page
+                columns_for_diagrams_per_page,
+                title if title != '' else None
             )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
