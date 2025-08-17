@@ -35,7 +35,14 @@ def create_pdf_from_fens(
     styles = getSampleStyleSheet()
 
     if title:
-        story.append(Paragraph(title, styles['h1']))
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.lib.styles import ParagraphStyle
+        centered_h1 = ParagraphStyle(
+            name='CenteredH1',
+            parent=styles['h1'],
+            alignment=1  # 1 = TA_CENTER
+        )
+        story.append(Paragraph(title, centered_h1))
 
     # Use provided layout or fallback to config
     layout_thresholds = columns_for_diagrams_per_page or DIAGRAM_CONFIG['grid_layout_thresholds']
@@ -49,7 +56,7 @@ def create_pdf_from_fens(
         cols = 3
 
     diagram_size = DIAGRAM_CONFIG['default_size']
-    diagram_size = min(diagram_size, page_width / cols - 10, page_height/((diagrams_per_page + cols - 1) // cols))  # Ensure diagrams fit within page width
+    diagram_size = min(diagram_size, page_width / cols - 20, page_height/((diagrams_per_page + cols - 1) // cols))  # Ensure diagrams fit within page width
 
     # Group FEN objects into pages
     fen_groups = [fens[i:i + diagrams_per_page] for i in range(0, len(fens), diagrams_per_page)]
@@ -58,8 +65,21 @@ def create_pdf_from_fens(
     table_padding = padding or TABLE_CONFIG['padding']
 
     for group in fen_groups:
+        col_width = page_width / cols
+        max_desc_height = 0
+        
+        # Determine the maximum description height for the current group
+        for fen_obj in group:
+            description = fen_obj.get('description')
+            if description:
+                p = Paragraph(description, styles['Normal'])
+                # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
+                w, h = p.wrap(col_width, page_height)
+                max_desc_height = max(max_desc_height, h)
+
         table_data = []
         row_data = []
+        
         for i, fen_obj in enumerate(group):
             fen = fen_obj['fen']
             description = fen_obj.get('description')
@@ -73,7 +93,7 @@ def create_pdf_from_fens(
                 drawing.width = diagram_size
                 drawing.height = diagram_size
                 item_story.append(drawing)
-
+            
             if description:
                 item_story.append(Spacer(1, 6))
                 item_story.append(Paragraph(description, styles['Normal']))
@@ -85,9 +105,15 @@ def create_pdf_from_fens(
                 row_data = []
 
         if table_data:
-            table = Table(table_data, colWidths=[page_width/cols]*cols)
+            # Calculate row height based on diagram, spacer, and max description height
+            row_height = diagram_size + (max_desc_height + 6 if max_desc_height else 0)
+            
+            # Ensure all rows in the table have a consistent height
+            num_rows = len(table_data)
+            table = Table(table_data, colWidths=[col_width]*cols, rowHeights=[row_height]*num_rows)
+            
             table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['vertical']),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('ALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['horizontal']),
                 ('LEFTPADDING', (0, 0), (-1, -1), table_padding.get('left', 0)),
                 ('RIGHTPADDING', (0, 0), (-1, -1), table_padding.get('right', 0)),

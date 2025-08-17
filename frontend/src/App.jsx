@@ -35,7 +35,7 @@ function App() {
     }
 
     const fenData = lines.map(line => {
-      const parts = line.split(/ (.*)/s);
+      const parts = line.split(/ \/\/ (.*)/s);
       return {
         fen: parts[0],
         description: parts[1] || '',
@@ -162,7 +162,7 @@ function App() {
                   >
                     <TextArea
                       rows={10}
-                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 Anand vs Carlsen, 2013"
+                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // Anand vs Carlsen, 2013"
                       style={{ fontFamily: "'Courier New', Courier, monospace" }}
                     />
                   </Form.Item>

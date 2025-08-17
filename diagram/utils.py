@@ -51,9 +51,9 @@ def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False):
     if show_turn_indicator and board.turn == chess.BLACK:
         # Add a black circle to indicate black's turn
         circle = Circle(
+            CHESS_BOARD_CONFIG['size'] + 15,
             CHESS_BOARD_CONFIG['size'] - 10,
-            CHESS_BOARD_CONFIG['size'] - 10,
-            5,
+            10,
             fillColor=colors.black,
             strokeColor=colors.white,
             strokeWidth=1
