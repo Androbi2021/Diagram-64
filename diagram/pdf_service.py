@@ -9,16 +9,19 @@ from .utils import fen_to_drawing
 
 logger = logging.getLogger(__name__)
 
+from reportlab.platypus import Spacer
+
 def create_pdf_from_fens(
-    fen_strings,
+    fens,
     diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
     padding=None,
     board_colors=None,
     columns_for_diagrams_per_page=None,
-    title=None
+    title=None,
+    show_turn_indicator=False
 ):
     """
-    Creates a PDF document with a grid layout of chess diagrams from a list of FEN strings.
+    Creates a PDF document with a grid layout of chess diagrams from a list of FEN objects.
     """
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -48,8 +51,8 @@ def create_pdf_from_fens(
     diagram_size = DIAGRAM_CONFIG['default_size']
     diagram_size = min(diagram_size, page_width / cols - 10, page_height/((diagrams_per_page + cols - 1) // cols))  # Ensure diagrams fit within page width
 
-    # Group FEN strings into pages
-    fen_groups = [fen_strings[i:i + diagrams_per_page] for i in range(0, len(fen_strings), diagrams_per_page)]
+    # Group FEN objects into pages
+    fen_groups = [fens[i:i + diagrams_per_page] for i in range(0, len(fens), diagrams_per_page)]
 
     # Use provided padding or fallback to config
     table_padding = padding or TABLE_CONFIG['padding']
@@ -57,22 +60,32 @@ def create_pdf_from_fens(
     for group in fen_groups:
         table_data = []
         row_data = []
-        for i, fen in enumerate(group):
-            drawing = fen_to_drawing(fen, board_colors)
+        for i, fen_obj in enumerate(group):
+            fen = fen_obj['fen']
+            description = fen_obj.get('description')
+
+            drawing = fen_to_drawing(fen, board_colors, show_turn_indicator)
+
+            item_story = []
             if drawing:
-                # Scale drawing
                 scale = diagram_size / drawing.width
                 drawing.scale(scale, scale)
                 drawing.width = diagram_size
                 drawing.height = diagram_size
-                row_data.append(drawing)
+                item_story.append(drawing)
+
+            if description:
+                item_story.append(Spacer(1, 6))
+                item_story.append(Paragraph(description, styles['Normal']))
+
+            row_data.append(item_story)
 
             if len(row_data) == cols or i == len(group) - 1:
                 table_data.append(row_data)
                 row_data = []
 
         if table_data:
-            table = Table(table_data)
+            table = Table(table_data, colWidths=[page_width/cols]*cols)
             table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['vertical']),
                 ('ALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['horizontal']),
