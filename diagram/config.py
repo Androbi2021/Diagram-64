@@ -6,7 +6,8 @@ from reportlab.lib import colors
 PDF_CONFIG = {
     'page_size': A4,  # The page size for the PDF (e.g., A4, LETTER).
     'default_diagrams_per_page': 6,  # Default number of chess diagrams to display per page.
-    'page_margin': 10  # Margin around the PDF page in points.
+    'page_margin': 10,  # Margin around the PDF page in points.
+    'padding_before_desc': 6
 }
 
 # Diagram Configuration

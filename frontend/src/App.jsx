@@ -123,7 +123,7 @@ function App() {
       </Header>
       <Content style={{ padding: '24px' }}>
         <Row justify="center">
-          <Col xs={24} sm={20} md={16} lg={12} xl={10}>
+          <Col xs={24} sm={20} md={20} lg={20} xl={20}>
             <Card>
               <Spin spinning={loading} tip="Generating PDF...">
                 <Form
@@ -134,7 +134,7 @@ function App() {
                     title: '',
                     fens: '',
                     diagramsPerPage: 6,
-                    padding: 5,
+                    padding: 2.5,
                     lightSquares: '#f0d9b5',
                     darkSquares: '#b58863',
                     borderColor: '#ffffffff',

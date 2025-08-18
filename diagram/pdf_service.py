@@ -33,16 +33,21 @@ def create_pdf_from_fens(
 
     story = []
     styles = getSampleStyleSheet()
+    h_title = 0
 
     if title:
-        from reportlab.lib.enums import TA_CENTER
         from reportlab.lib.styles import ParagraphStyle
         centered_h1 = ParagraphStyle(
             name='CenteredH1',
             parent=styles['h1'],
             alignment=1  # 1 = TA_CENTER
         )
-        story.append(Paragraph(title, centered_h1))
+        t = Paragraph(title, centered_h1)
+        _w, h_title = t.wrap(page_width, page_height)
+        story.append(t)
+        # Ajoute un espace après le titre pour une meilleure aération
+        story.append(Spacer(1, h_title * 0.5))
+        h_title *= 1.5 # On inclut l'espace dans la hauteur totale du titre
 
     # Use provided layout or fallback to config
     layout_thresholds = columns_for_diagrams_per_page or DIAGRAM_CONFIG['grid_layout_thresholds']
@@ -55,14 +60,15 @@ def create_pdf_from_fens(
     else:
         cols = 3
 
-    diagram_size = DIAGRAM_CONFIG['default_size']
-    diagram_size = min(diagram_size, page_width / cols - 20, page_height/((diagrams_per_page + cols - 1) // cols))  # Ensure diagrams fit within page width
-
     # Group FEN objects into pages
     fen_groups = [fens[i:i + diagrams_per_page] for i in range(0, len(fens), diagrams_per_page)]
 
     # Use provided padding or fallback to config
     table_padding = padding or TABLE_CONFIG['padding']
+    top_padding = table_padding.get('top', 5)
+    bottom_padding = table_padding.get('bottom', 5)
+
+    is_first_page = True
 
     for group in fen_groups:
         col_width = page_width / cols
@@ -74,8 +80,19 @@ def create_pdf_from_fens(
             if description:
                 p = Paragraph(description, styles['Normal'])
                 # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
-                w, h = p.wrap(col_width, page_height)
+                _w, h = p.wrap(col_width, page_height)
                 max_desc_height = max(max_desc_height, h)
+        
+        available_page_height = page_height
+        if is_first_page and title:
+            available_page_height -= h_title
+            is_first_page = False
+
+        number_of_rows = (diagrams_per_page + cols - 1) // cols  # A formula to avoid calling math.ceil
+        available_height_for_content_per_row = available_page_height / number_of_rows
+        diagram_height_max = available_height_for_content_per_row - max_desc_height - PDF_CONFIG.get('padding_before_desc') - top_padding - bottom_padding -6
+
+        diagram_size = min(DIAGRAM_CONFIG['default_size'], page_width / cols - 20, diagram_height_max)  # Ensure diagrams fit within page width
 
         table_data = []
         row_data = []
@@ -95,7 +112,7 @@ def create_pdf_from_fens(
                 item_story.append(drawing)
             
             if description:
-                item_story.append(Spacer(1, 6))
+                item_story.append(Spacer(1, PDF_CONFIG.get('padding_before_desc')))
                 item_story.append(Paragraph(description, styles['Normal']))
 
             row_data.append(item_story)
@@ -105,8 +122,8 @@ def create_pdf_from_fens(
                 row_data = []
 
         if table_data:
-            # Calculate row height based on diagram, spacer, and max description height
-            row_height = diagram_size + (max_desc_height + 6 if max_desc_height else 0)
+            content_height = diagram_size + max_desc_height + PDF_CONFIG.get('padding_before_desc')
+            row_height = content_height + top_padding + bottom_padding
             
             # Ensure all rows in the table have a consistent height
             num_rows = len(table_data)
