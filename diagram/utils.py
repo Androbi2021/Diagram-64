@@ -3,12 +3,14 @@ import chess
 import chess.svg
 from svglib.svglib import svg2rlg
 from io import StringIO
+from reportlab.graphics.shapes import Circle
+from reportlab.lib import colors
 
 from .config import CHESS_BOARD_CONFIG
 
 logger = logging.getLogger(__name__)
 
-def fen_to_drawing(fen_string, board_colors=None):
+def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False):
     """
     Converts a FEN string to a ReportLab Drawing object.
     """
@@ -16,8 +18,8 @@ def fen_to_drawing(fen_string, board_colors=None):
     board = chess.Board(fen_string)
 
     # Use provided colors or fallback to config
-    colors = board_colors or CHESS_BOARD_CONFIG['colors']
-    border_color = colors.get('border_color')
+    colors_config = board_colors or CHESS_BOARD_CONFIG['colors']
+    border_color = colors_config.get('border_color')
 
     # Generate an SVG string of the board
     svg_board = chess.svg.board(
@@ -25,8 +27,8 @@ def fen_to_drawing(fen_string, board_colors=None):
         size=CHESS_BOARD_CONFIG['size'],
         coordinates=CHESS_BOARD_CONFIG['coordinates'],
         colors={
-            "square light": colors.get("light_squares"),
-            "square dark": colors.get("dark_squares"),
+            "square light": colors_config.get("light_squares"),
+            "square dark": colors_config.get("dark_squares"),
             "coord": CHESS_BOARD_CONFIG['coord'],
         }
     )
@@ -45,5 +47,18 @@ def fen_to_drawing(fen_string, board_colors=None):
 
     # Convert the SVG file to a ReportLab Drawing object
     drawing = svg2rlg(svg_file)
+
+    if show_turn_indicator and board.turn == chess.BLACK:
+        # Add a black circle to indicate black's turn
+        circle = Circle(
+            CHESS_BOARD_CONFIG['size'] + 15,
+            CHESS_BOARD_CONFIG['size'] - 10,
+            10,
+            fillColor=colors.black,
+            strokeColor=colors.white,
+            strokeWidth=1
+        )
+        drawing.add(circle)
+
 
     return drawing
