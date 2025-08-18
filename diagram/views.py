@@ -15,17 +15,18 @@ class GeneratePdfApiView(APIView):
     """
     def post(self, request, *args, **kwargs):
         
-        fen_strings = request.data.get('fens')
+        fens = request.data.get('fens')
         diagrams_per_page = request.data.get('diagrams_per_page', 1)
         padding = request.data.get('padding')
         board_colors = request.data.get('board_colors')
         columns_for_diagrams_per_page = request.data.get('columns_for_diagrams_per_page')
         title = request.data.get('title')
-        
+        show_turn_indicator = request.data.get('show_turn_indicator', False)
 
-        if not fen_strings or not isinstance(fen_strings, list):
+
+        if not fens or not isinstance(fens, list):
             return Response(
-                {"error": "FEN strings must be provided in a list."},
+                {"error": "FENs must be provided in a list."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -40,12 +41,13 @@ class GeneratePdfApiView(APIView):
 
         try:
             pdf_data = create_pdf_from_fens(
-                fen_strings,
+                fens,
                 diagrams_per_page,
                 padding,
                 board_colors,
                 columns_for_diagrams_per_page,
-                title if title != '' else None
+                title if title != '' else None,
+                show_turn_indicator
             )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')

@@ -13,6 +13,7 @@ import {
   Card,
   Typography,
   notification,
+  Checkbox,
 } from 'antd';
 
 const { Header, Content } = Layout;
@@ -24,14 +25,22 @@ function App() {
   const [form] = Form.useForm();
 
   const handleGeneratePdf = async (values) => {
-    const fenList = values.fens.split('\n').filter((fen) => fen.trim() !== '');
-    if (fenList.length === 0) {
+    const lines = values.fens.split('\n').filter((line) => line.trim() !== '');
+    if (lines.length === 0) {
       notification.error({
         message: 'Validation Error',
         description: 'Please enter at least one FEN string.',
       });
       return;
     }
+
+    const fenData = lines.map(line => {
+      const parts = line.split(/ \/\/ (.*)/s);
+      return {
+        fen: parts[0],
+        description: parts[1] || '',
+      };
+    });
 
     setLoading(true);
 
@@ -43,7 +52,7 @@ function App() {
     };
 
     const payload = {
-      fens: fenList,
+      fens: fenData,
       diagrams_per_page: values.diagramsPerPage,
       padding: {
         top: values.padding,
@@ -61,6 +70,7 @@ function App() {
         two_column_max: values.twoColumnMax,
       },
       title: values.title,
+      show_turn_indicator: values.showTurnIndicator,
     };
 
     try {
@@ -113,7 +123,7 @@ function App() {
       </Header>
       <Content style={{ padding: '24px' }}>
         <Row justify="center">
-          <Col xs={24} sm={20} md={16} lg={12} xl={10}>
+          <Col xs={24} sm={20} md={20} lg={20} xl={20}>
             <Card>
               <Spin spinning={loading} tip="Generating PDF...">
                 <Form
@@ -124,12 +134,13 @@ function App() {
                     title: '',
                     fens: '',
                     diagramsPerPage: 6,
-                    padding: 5,
+                    padding: 2.5,
                     lightSquares: '#f0d9b5',
                     darkSquares: '#b58863',
                     borderColor: '#ffffffff',
                     singleColumn: 1,
                     twoColumnMax: 8,
+                    showTurnIndicator: true,
                   }}
                 >
                   <Form.Item
@@ -146,12 +157,12 @@ function App() {
 
                   <Form.Item
                     name="fens"
-                    label="Enter FEN strings (one per line):"
+                    label="Enter FEN and description (one per line):"
                     rules={[{ required: true, message: 'Please input at least one FEN string!' }]}
                   >
                     <TextArea
                       rows={10}
-                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // Anand vs Carlsen, 2013"
                       style={{ fontFamily: "'Courier New', Courier, monospace" }}
                     />
                   </Form.Item>
@@ -200,6 +211,10 @@ function App() {
                       </Form.Item>
                     </Col>
                   </Row>
+
+                  <Form.Item name="showTurnIndicator" valuePropName="checked" style={{ marginTop: '16px' }}>
+                    <Checkbox>Show turn indicator for Black</Checkbox>
+                  </Form.Item>
 
                   <Form.Item style={{ marginTop: '24px' }}>
                     <Button type="primary" htmlType="submit" block loading={loading} size="large">
