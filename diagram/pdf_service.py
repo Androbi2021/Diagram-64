@@ -40,7 +40,7 @@ def create_pdf_from_fens(
         centered_h1 = ParagraphStyle(
             name='CenteredH1',
             fontName='Times-Roman',
-            fontSize=16,
+            fontSize=20,
             parent=styles['h1'],
             alignment=1  # 1 = TA_CENTER
         )
