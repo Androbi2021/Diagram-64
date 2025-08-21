@@ -116,10 +116,10 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Header style={{ background: '#001529', padding: '0 24px' }}>
+    <Layout style={{ minHeight: '100vh', background: '#e4e1e1ff' }}>
+      <Header style={{ background: '#0d5ba5ff', padding: '0 24px' }}>
         <Title level={2} style={{ color: 'white', lineHeight: '64px', margin: 0 }}>
-          Chess Diagram PDF Generator
+          Diagram 64
         </Title>
       </Header>
       <Content style={{ padding: '24px' }}>
@@ -136,8 +136,8 @@ function App() {
                     fens: '',
                     diagramsPerPage: 6,
                     padding: 2.5,
-                    lightSquares: '#f0d9b5',
-                    darkSquares: '#b58863',
+                    lightSquares: '#ffffffff',
+                    darkSquares: '#878787ff',
                     borderColor: '#ffffffff',
                     singleColumn: 1,
                     twoColumnMax: 8,

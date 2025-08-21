@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, PageBreak, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from .config import PDF_CONFIG, DIAGRAM_CONFIG, TABLE_CONFIG, CHESS_BOARD_CONFIG
@@ -37,9 +37,10 @@ def create_pdf_from_fens(
     h_title = 0
 
     if title:
-        from reportlab.lib.styles import ParagraphStyle
         centered_h1 = ParagraphStyle(
             name='CenteredH1',
+            fontName='Times-Roman',
+            fontSize=20,
             parent=styles['h1'],
             alignment=1  # 1 = TA_CENTER
         )
@@ -79,7 +80,13 @@ def create_pdf_from_fens(
         for fen_obj in group:
             description = fen_obj.get('description')
             if description:
-                p = Paragraph(description, styles['Normal'])
+                centered_normal = ParagraphStyle(
+                    name='CenteredNormal',
+                    fontName='Times-Roman',
+                    parent=styles['Normal'],
+                    alignment=1  # 1 = TA_CENTER
+                )
+                p = Paragraph(description, centered_normal)
                 # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
                 _w, h = p.wrap(col_width, page_height)
                 max_desc_height = max(max_desc_height, h)
@@ -114,7 +121,7 @@ def create_pdf_from_fens(
             
             if description:
                 item_story.append(Spacer(1, PDF_CONFIG.get('padding_before_desc')))
-                item_story.append(Paragraph(description, styles['Normal']))
+                item_story.append(Paragraph(description, centered_normal))
 
             row_data.append(item_story)
 
