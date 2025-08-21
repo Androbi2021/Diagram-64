@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 import {
   Layout,
@@ -14,33 +14,91 @@ import {
   Typography,
   notification,
   Checkbox,
+  Modal,
+  Space,
 } from 'antd';
+import { MinusCircleOutlined, PlusOutlined, HolderOutlined } from '@ant-design/icons';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
 const { TextArea } = Input;
 
+const DraggableItem = ({ id, index, field, remove }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    marginBottom: 8,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <Space align="baseline">
+        <span {...listeners} style={{ cursor: 'grab' }}>
+          <HolderOutlined />
+        </span>
+        <Form.Item
+          {...field}
+          name={[field.name, 'fen']}
+          rules={[{ required: true, message: 'Missing FEN' }]}
+          style={{ width: '300px' }}
+        >
+          <Input placeholder="FEN" />
+        </Form.Item>
+        <Form.Item
+          {...field}
+          name={[field.name, 'description']}
+          style={{ width: '300px' }}
+        >
+          <Input placeholder="Description" />
+        </Form.Item>
+        <MinusCircleOutlined onClick={() => remove(field.name)} />
+      </Space>
+    </div>
+  );
+};
+
 function App() {
   const [loading, setLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [importText, setImportText] = useState('');
   const [form] = Form.useForm();
+  const nextId = useRef(0);
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const onDragEnd = ({ active, over }) => {
+    if (active.id !== over.id) {
+      const diagrams = form.getFieldValue('diagrams') || [];
+      const oldIndex = diagrams.findIndex((item) => item.id === active.id);
+      const newIndex = diagrams.findIndex((item) => item.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newDiagrams = arrayMove(diagrams, oldIndex, newIndex);
+        form.setFieldsValue({ diagrams: newDiagrams });
+      }
+    }
+  };
 
   const handleGeneratePdf = async (values) => {
-    const lines = values.fens.split('\n').filter((line) => line.trim() !== '');
-    if (lines.length === 0) {
+    const fenData = values.diagrams
+      .map(({ fen, description }) => ({ fen, description: description || '' }))
+      .filter(d => d.fen && d.fen.trim() !== '');
+
+    if (fenData.length === 0) {
       notification.error({
         message: 'Validation Error',
         description: 'Please enter at least one FEN string.',
       });
       return;
     }
-
-    const fenData = lines.map(line => {
-      const parts = line.split(/ \/\/ (.*)/s);
-      return {
-        fen: parts[0],
-        description: parts[1] || '',
-      };
-    });
 
     setLoading(true);
 
@@ -133,7 +191,7 @@ function App() {
                   onFinish={handleGeneratePdf}
                   initialValues={{
                     title: '',
-                    fens: '',
+                    diagrams: [{ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', description: 'Initial position', id: 'initial-0' }],
                     diagramsPerPage: 6,
                     padding: 2.5,
                     lightSquares: '#ffffffff',
@@ -157,17 +215,73 @@ function App() {
                     />
                   </Form.Item>
 
-                  <Form.Item
-                    name="fens"
-                    label="Enter FEN and description (one per line):"
-                    rules={[{ required: true, message: 'Please input at least one FEN string!' }]}
+                  <Form.List name="diagrams">
+                    {(fields, { add, remove }) => (
+                      <>
+                        <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+                          <SortableContext
+                            items={form.getFieldValue('diagrams')?.map(i => i.id) || []}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {fields.map((field, index) => {
+                              const diagram = form.getFieldValue('diagrams')[index];
+                              return (
+                                <DraggableItem
+                                  key={diagram?.id}
+                                  id={diagram?.id}
+                                  index={index}
+                                  field={field}
+                                  remove={remove}
+                                />
+                              );
+                            })}
+                          </SortableContext>
+                        </DndContext>
+                        <Form.Item>
+                          <Space>
+                            <Button
+                              type="dashed"
+                              onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
+                              icon={<PlusOutlined />}
+                            >
+                              Add Diagram
+                            </Button>
+                            <Button onClick={() => setIsModalVisible(true)}>
+                              Import from Text
+                            </Button>
+                          </Space>
+                        </Form.Item>
+                      </>
+                    )}
+                  </Form.List>
+
+                  <Modal
+                    title="Import Diagrams"
+                    open={isModalVisible}
+                    onOk={() => {
+                      const lines = importText.split('\n').filter(line => line.trim() !== '');
+                      const newDiagrams = lines.map((line) => {
+                        const parts = line.split(/ \/\/ (.*)/s);
+                        return {
+                          fen: parts[0],
+                          description: parts[1] || '',
+                          id: `imported-${nextId.current++}`,
+                        };
+                      });
+                      form.setFieldsValue({ diagrams: newDiagrams });
+                      setIsModalVisible(false);
+                      setImportText('');
+                    }}
+                    onCancel={() => setIsModalVisible(false)}
                   >
                     <TextArea
                       rows={10}
                       placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // Anand vs Carlsen, 2013"
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
                       style={{ fontFamily: "'Courier New', Courier, monospace" }}
                     />
-                  </Form.Item>
+                  </Modal>
 
                   <Row gutter={16}>
                     <Col xs={24} sm={12}>
