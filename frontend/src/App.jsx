@@ -23,7 +23,7 @@ import {
   SortableContext,
   useSortable,
   arrayMove,
-  verticalListSortingStrategy,
+  rectSwappingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -31,7 +31,9 @@ const { Header, Content } = Layout;
 const { Title } = Typography;
 const { TextArea } = Input;
 
-const DraggableItem = ({ id, index, field, remove }) => {
+const fenRegex = /^([rnbqkpRNBQKP1-8]{1,8}\/){7}[rnbqkpRNBQKP1-8]{1,8} [bw] (K?Q?k?q?|-) (-|[a-h][36]) \d+ \d+$/;
+
+const DraggableItem = ({ id, field, remove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
 
   const style = {
@@ -43,21 +45,27 @@ const DraggableItem = ({ id, index, field, remove }) => {
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <Space align="baseline">
-        <span {...listeners} style={{ cursor: 'grab' }}>
+        <span {...listeners} style={{ cursor: 'grab' }} role="button" aria-label="Drag to reorder">
           <HolderOutlined />
         </span>
         <Form.Item
           {...field}
           name={[field.name, 'fen']}
-          rules={[{ required: true, message: 'Missing FEN' }]}
-          style={{ width: '300px' }}
+          rules={[
+            { required: true, message: 'Missing FEN' },
+            {
+              pattern: fenRegex,
+              message: 'Invalid FEN format.',
+            }
+          ]}
+          style={{ width: '100%' }}
         >
           <Input placeholder="FEN" />
         </Form.Item>
         <Form.Item
           {...field}
           name={[field.name, 'description']}
-          style={{ width: '300px' }}
+          style={{ width: '100%' }}
         >
           <Input placeholder="Description" />
         </Form.Item>
@@ -71,12 +79,15 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [importText, setImportText] = useState('');
+  const [isListExpanded, setIsListExpanded] = useState(false);
+  const INITIAL_VISIBLE_COUNT = 4; // Number of items to show when collapsed
+
   const [form] = Form.useForm();
   const nextId = useRef(0);
   const sensors = useSensors(useSensor(PointerSensor));
 
   const onDragEnd = ({ active, over }) => {
-    if (active.id !== over.id) {
+    if (active && over && active.id !== over.id) {
       const diagrams = form.getFieldValue('diagrams') || [];
       const oldIndex = diagrams.findIndex((item) => item.id === active.id);
       const newIndex = diagrams.findIndex((item) => item.id === over.id);
@@ -130,6 +141,7 @@ function App() {
       title: values.title,
       show_turn_indicator: values.showTurnIndicator,
       show_page_numbers: values.showPageNumbers,
+      show_coordinates: values.showCoordinates,
     };
 
     try {
@@ -200,7 +212,8 @@ function App() {
                     singleColumn: 1,
                     twoColumnMax: 8,
                     showTurnIndicator: true,
-                    showPageNumbers: false,
+                    showPageNumbers: true,
+                    showCoordinates: false,
                   }}
                 >
                   <Form.Item
@@ -216,43 +229,61 @@ function App() {
                   </Form.Item>
 
                   <Form.List name="diagrams">
-                    {(fields, { add, remove }) => (
-                      <>
-                        <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
-                          <SortableContext
-                            items={form.getFieldValue('diagrams')?.map(i => i.id) || []}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {fields.map((field, index) => {
-                              const diagram = form.getFieldValue('diagrams')[index];
-                              return (
-                                <DraggableItem
-                                  key={diagram?.id}
-                                  id={diagram?.id}
-                                  index={index}
-                                  field={field}
-                                  remove={remove}
-                                />
-                              );
-                            })}
-                          </SortableContext>
-                        </DndContext>
-                        <Form.Item>
-                          <Space>
-                            <Button
-                              type="dashed"
-                              onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
-                              icon={<PlusOutlined />}
+                    {(fields, { add, remove }) => {
+                      const visibleFields = isListExpanded ? fields : fields.slice(0, INITIAL_VISIBLE_COUNT);
+
+                      return (
+                        <>
+                          <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+                            <SortableContext
+                              items={form.getFieldValue('diagrams')?.map(i => i.id) || []}
+                              strategy={rectSwappingStrategy}
                             >
-                              Add Diagram
+                              <Row gutter={[16, 0]}>
+                                {visibleFields.map((field, index) => {
+                                  const diagram = form.getFieldValue('diagrams')[index];
+                                  return (
+                                    <Col xs={24} lg={12} key={field.key}>
+                                      <DraggableItem
+                                        key={diagram?.id}
+                                        id={diagram?.id}
+                                        field={field}
+                                        remove={remove}
+                                      />
+                                    </Col>
+                                  );
+                                })}
+                              </Row>
+                            </SortableContext>
+                          </DndContext>
+
+                          {fields.length > INITIAL_VISIBLE_COUNT && (
+                            <Button
+                              type="link"
+                              onClick={() => setIsListExpanded(!isListExpanded)}
+                              style={{ paddingLeft: 0, marginTop: 8 }}
+                            >
+                              {isListExpanded ? 'Afficher moins' : `Afficher les ${fields.length - INITIAL_VISIBLE_COUNT} autres...`}
                             </Button>
-                            <Button onClick={() => setIsModalVisible(true)}>
-                              Import from Text
-                            </Button>
-                          </Space>
-                        </Form.Item>
-                      </>
-                    )}
+                          )}
+
+                          <Form.Item style={{ marginTop: '16px' }}>
+                            <Space>
+                              <Button
+                                type="dashed"
+                                onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
+                                icon={<PlusOutlined />}
+                              >
+                                Add Diagram
+                              </Button>
+                              <Button onClick={() => setIsModalVisible(true)}>
+                                Import from Text
+                              </Button>
+                            </Space>
+                          </Form.Item>
+                        </>
+                      );
+                    }}
                   </Form.List>
 
                   <Modal
@@ -334,6 +365,10 @@ function App() {
 
                   <Form.Item name="showPageNumbers" valuePropName="checked" style={{ marginTop: '16px' }}>
                     <Checkbox>Show page numbers</Checkbox>
+                  </Form.Item>
+
+                  <Form.Item name="showCoordinates" valuePropName="checked" style={{ marginTop: '16px' }}>
+                    <Checkbox>Show Coordinates</Checkbox>
                   </Form.Item>
 
                   <Form.Item style={{ marginTop: '24px' }}>
