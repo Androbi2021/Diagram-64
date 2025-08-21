@@ -18,7 +18,8 @@ def create_pdf_from_fens(
     board_colors=None,
     columns_for_diagrams_per_page=None,
     title=None,
-    show_turn_indicator=False
+    show_turn_indicator=False,
+    show_page_numbers=False
 ):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN objects.
@@ -144,7 +145,21 @@ def create_pdf_from_fens(
         # Remove the last PageBreak
         story.pop()
 
-    doc.build(story)
+    def draw_page_number(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Times-Roman', 10)
+        page_number_text = f"Page {doc.page}"
+        canvas.drawCentredString(
+            A4[0] / 2,
+            20,
+            page_number_text
+        )
+        canvas.restoreState()
+
+    if show_page_numbers:
+        doc.build(story, onFirstPage=draw_page_number, onLaterPages=draw_page_number)
+    else:
+        doc.build(story)
 
     pdf_data = buffer.getvalue()
     buffer.close()

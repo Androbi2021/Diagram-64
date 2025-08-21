@@ -22,6 +22,7 @@ class GeneratePdfApiView(APIView):
         columns_for_diagrams_per_page = request.data.get('columns_for_diagrams_per_page')
         title = request.data.get('title')
         show_turn_indicator = request.data.get('show_turn_indicator', False)
+        show_page_numbers = request.data.get('show_page_numbers', False)
 
 
         if not fens or not isinstance(fens, list):
@@ -47,7 +48,8 @@ class GeneratePdfApiView(APIView):
                 board_colors,
                 columns_for_diagrams_per_page,
                 title if title != '' else None,
-                show_turn_indicator
+                show_turn_indicator,
+                show_page_numbers
             )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
