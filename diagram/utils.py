@@ -10,7 +10,7 @@ from .config import CHESS_BOARD_CONFIG
 
 logger = logging.getLogger(__name__)
 
-def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False):
+def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False, show_coordinates=CHESS_BOARD_CONFIG['coordinates']):
     """
     Converts a FEN string to a ReportLab Drawing object.
     """
@@ -25,7 +25,7 @@ def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False):
     svg_board = chess.svg.board(
         board=board,
         size=CHESS_BOARD_CONFIG['size'],
-        coordinates=CHESS_BOARD_CONFIG['coordinates'],
+        coordinates=show_coordinates,
         colors={
             "square light": colors_config.get("light_squares"),
             "square dark": colors_config.get("dark_squares"),
