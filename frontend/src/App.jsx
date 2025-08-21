@@ -71,6 +71,7 @@ function App() {
       },
       title: values.title,
       show_turn_indicator: values.showTurnIndicator,
+      show_page_numbers: values.showPageNumbers,
     };
 
     try {
@@ -141,6 +142,7 @@ function App() {
                     singleColumn: 1,
                     twoColumnMax: 8,
                     showTurnIndicator: true,
+                    showPageNumbers: false,
                   }}
                 >
                   <Form.Item
@@ -214,6 +216,10 @@ function App() {
 
                   <Form.Item name="showTurnIndicator" valuePropName="checked" style={{ marginTop: '16px' }}>
                     <Checkbox>Show turn indicator for Black</Checkbox>
+                  </Form.Item>
+
+                  <Form.Item name="showPageNumbers" valuePropName="checked" style={{ marginTop: '16px' }}>
+                    <Checkbox>Show page numbers</Checkbox>
                   </Form.Item>
 
                   <Form.Item style={{ marginTop: '24px' }}>
