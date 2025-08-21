@@ -5,13 +5,11 @@ This is a full-stack web application that allows users to convert chess diagrams
 ## Features
 
 - **FEN to PDF Conversion:** Converts standard FEN strings into visual chess diagrams.
-- **Custom Layout:** Allows users to choose the number of diagrams per page.
+- **Custom Layout:** Allows users to choose the number of diagrams per page, the spacing and the number of columns.
 - **Grid Arrangement:** Automatically arranges diagrams in a clean grid layout within the PDF.
-- **Custom Spacing:** Control the amount of space between diagrams.
-- **Custom Colors:** Change the colors of the light and dark squares on the chess board.
-- **Custom Column Layout:** Define the number of columns based on the number of diagrams per page.
-- **REST API:** A Django-based backend provides a simple API for the conversion.
-- **Modern Frontend:** A responsive and easy-to-use interface built with React and Vite.
+- **Customization:** Possibility to change the diagram colors, add coordinates and more.
+- **Text Addition:** Allows the addition of a title and diagrams description.
+- **Modern Frontend:** A responsive and easy-to-use interface built with React and Vite (project also usable without the frontend).
 
 ## Technology Stack
 
