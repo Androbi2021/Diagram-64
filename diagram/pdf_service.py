@@ -39,6 +39,8 @@ def create_pdf_from_fens(
     if title:
         centered_h1 = ParagraphStyle(
             name='CenteredH1',
+            fontName='Times-Roman',
+            fontSize=16,
             parent=styles['h1'],
             alignment=1  # 1 = TA_CENTER
         )
@@ -80,6 +82,7 @@ def create_pdf_from_fens(
             if description:
                 centered_normal = ParagraphStyle(
                     name='CenteredNormal',
+                    fontName='Times-Roman',
                     parent=styles['Normal'],
                     alignment=1  # 1 = TA_CENTER
                 )
