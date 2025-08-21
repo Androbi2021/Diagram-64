@@ -19,7 +19,8 @@ def create_pdf_from_fens(
     columns_for_diagrams_per_page=None,
     title=None,
     show_turn_indicator=False,
-    show_page_numbers=False
+    show_page_numbers=False,
+    show_coordinates=CHESS_BOARD_CONFIG['coordinates']
 ):
     """
     Creates a PDF document with a grid layout of chess diagrams from a list of FEN objects.
