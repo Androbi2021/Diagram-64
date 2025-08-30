@@ -16,6 +16,7 @@ def create_pdf_from_fens(
     diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
     padding=None,
     board_colors=None,
+    border_color=None,
     columns_for_diagrams_per_page=None,
     title=None,
     show_turn_indicator=False,
@@ -78,8 +79,12 @@ def create_pdf_from_fens(
         max_desc_height = 0
         
         # Determine the maximum description height for the current group
-        for fen_obj in group:
-            description = fen_obj.get('description')
+        for fen_item in group:
+            # Support both dict objects with 'description' and raw FEN strings
+            if isinstance(fen_item, dict):
+                description = fen_item.get('description')
+            else:
+                description = None
             if description:
                 centered_normal = ParagraphStyle(
                     name='CenteredNormal',
@@ -106,11 +111,20 @@ def create_pdf_from_fens(
         table_data = []
         row_data = []
         
-        for i, fen_obj in enumerate(group):
-            fen = fen_obj['fen']
-            description = fen_obj.get('description')
+        for i, fen_item in enumerate(group):
+            # Support both dict objects with 'fen' and raw FEN strings
+            if isinstance(fen_item, dict):
+                fen = fen_item.get('fen')
+                description = fen_item.get('description')
+            else:
+                fen = fen_item
+                description = None
 
-            drawing = fen_to_drawing(fen, board_colors, show_turn_indicator, show_coordinates)
+            # Prepare board_colors, merging the new border_color if provided
+            current_board_colors = dict(board_colors or {})
+            if border_color is not None:
+                current_board_colors['border_color'] = border_color
+            drawing = fen_to_drawing(fen, current_board_colors, show_turn_indicator, show_coordinates)
 
             item_story = []
             if drawing:
