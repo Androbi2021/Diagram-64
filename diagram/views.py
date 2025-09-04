@@ -19,7 +19,6 @@ class GeneratePdfApiView(APIView):
         diagrams_per_page = request.data.get('diagrams_per_page', 1)
         padding = request.data.get('padding')
         board_colors = request.data.get('board_colors')
-        border_color = request.data.get('inner_border_color')
         columns_for_diagrams_per_page = request.data.get('columns_for_diagrams_per_page')
         title = request.data.get('title')
         show_turn_indicator = request.data.get('show_turn_indicator', False)
@@ -48,7 +47,6 @@ class GeneratePdfApiView(APIView):
                 diagrams_per_page=diagrams_per_page,
                 padding=padding,
                 board_colors=board_colors,
-                border_color=border_color,
                 columns_for_diagrams_per_page=columns_for_diagrams_per_page,
                 title=title if title != '' else None,
                 show_turn_indicator=show_turn_indicator,

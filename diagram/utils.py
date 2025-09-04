@@ -17,24 +17,11 @@ def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False, sho
     # Create a chess board from the FEN string
     board = chess.Board(fen_string)
 
-    # Helper to determine if a fallback outline should be drawn
-    def needs_fallback_outline(color_val):
-        if color_val is None:
-            return True
-        normalized_color = str(color_val).strip().lower()
-        if normalized_color in ["white", "#fff", "#ffffff"]:
-            return True
-        # Check for rgb(255,255,255) variations
-        if normalized_color.startswith("rgb("):
-            parts = normalized_color[4:-1].split(',')
-            if len(parts) == 3 and all(p.strip() == "255" for p in parts):
-                return True
-        return False
-
     # Use provided colors merged over defaults to avoid missing keys
     base_colors = CHESS_BOARD_CONFIG['colors']
     colors_config = {**base_colors, **(board_colors or {})}
-    border_color_raw = colors_config.get('border_color')
+    outline_color = colors_config.get('dark_squares')
+    border_color = colors_config.get('border_color')
     
     # Generate an SVG string of the board
     svg_board = chess.svg.board(
@@ -47,8 +34,17 @@ def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False, sho
             "coord": CHESS_BOARD_CONFIG['coord'],
         }
     )
+
+    if show_coordinates and border_color:
+        # The border is the first <rect> element with a 'stroke' attribute.
+        # We replace the stroke color of the first rect that has fill="none".
+        import re
+        svg_board = re.sub(r'(<rect[^>]*fill="none"[^>]*stroke=")[^"]*(")',
+                           r'\g<1>' + border_color + r'\2',
+                           svg_board,
+                           count=1)
     
-    # Note: Do not mutate the SVG string for border color; we'll draw the desired
+    # If there's no coordinates, we'll draw the desired
     # border at the Drawing level to avoid brittle SVG regex manipulation.
 
     # Use a StringIO object to simulate a file for svglib
@@ -57,17 +53,9 @@ def fen_to_drawing(fen_string, board_colors=None, show_turn_indicator=False, sho
     # Convert the SVG file to a ReportLab Drawing object
     drawing = svg2rlg(svg_file)
 
-    # Add outline: use specified border_color if non-white; otherwise black fallback
-    outline_color = None
-    if needs_fallback_outline(border_color_raw):
-        outline_color = colors.black
-    elif border_color_raw:
-        try:
-            outline_color = colors.toColor(str(border_color_raw))
-        except Exception:
-            outline_color = colors.black
+    # Add outline
 
-    if outline_color:
+    if not show_coordinates:
         # Add a rectangle slightly inset to serve as the outline
         outline = Rect(
             0.5, 0.5,  # Small inset from the top-left corner

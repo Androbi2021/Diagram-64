@@ -134,8 +134,7 @@ function App() {
         dark_squares: getColorString(values.darkSquares),
         border_color: getColorString(values.borderColor),
       },
-      inner_border_color: getColorString(values.innerBorderColor),
-
+      
       columns_for_diagrams_per_page: {
         single_column: values.singleColumn,
         two_column_max: values.twoColumnMax,
@@ -210,8 +209,7 @@ function App() {
                     padding: 2.5,
                     lightSquares: '#ffffffff',
                     darkSquares: '#878787',
-                    borderColor: '#ffffffff',
-                    innerBorderColor: '#878787',
+                    borderColor: '#ecececff',
                     singleColumn: 1,
                     twoColumnMax: 8,
                     showTurnIndicator: true,
@@ -342,12 +340,7 @@ function App() {
                       </Form.Item>
                     </Col>
                     <Col xs={6}>
-                      <Form.Item name="borderColor" label="Border">
-                        <ColorPicker showText />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={6}>
-                      <Form.Item name="innerBorderColor" label="Inner Border">
+                      <Form.Item name="borderColor" label="Coordinates Border">
                         <ColorPicker showText />
                       </Form.Item>
                     </Col>

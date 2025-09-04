@@ -44,6 +44,6 @@ CHESS_BOARD_CONFIG = {
     'colors': {
         'light_squares': '#f0d9b5',  # Color for light squares on the board.
         'dark_squares': '#b58863',   # Color for dark squares on the board.
-        'border_color': '#000000' # defines the color of the board border.
+        'border_color': "#FFFFFF" # defines the color of the board border.
     }
 }

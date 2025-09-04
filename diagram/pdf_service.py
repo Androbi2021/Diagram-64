@@ -16,7 +16,6 @@ def create_pdf_from_fens(
     diagrams_per_page=PDF_CONFIG['default_diagrams_per_page'],
     padding=None,
     board_colors=None,
-    border_color=None,
     columns_for_diagrams_per_page=None,
     title=None,
     show_turn_indicator=False,
@@ -122,8 +121,6 @@ def create_pdf_from_fens(
 
             # Prepare board_colors, merging the new border_color if provided
             current_board_colors = dict(board_colors or {})
-            if border_color is not None:
-                current_board_colors['border_color'] = border_color
             drawing = fen_to_drawing(fen, current_board_colors, show_turn_indicator, show_coordinates)
 
             item_story = []
