@@ -35,6 +35,8 @@ const fenRegex = /^([rnbqkpRNBQKP1-8]{1,8}\/){7}[rnbqkpRNBQKP1-8]{1,8} [bw] (K?Q
 
 const DraggableItem = ({ id, field, remove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  // Destructure key out to avoid spreading it into JSX (React 19 requirement)
+  const { key: _key, ...restField } = field;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +51,7 @@ const DraggableItem = ({ id, field, remove }) => {
           <HolderOutlined />
         </span>
         <Form.Item
-          {...field}
+          {...restField}
           name={[field.name, 'fen']}
           rules={[
             { required: true, message: 'Missing FEN' },
@@ -63,7 +65,7 @@ const DraggableItem = ({ id, field, remove }) => {
           <Input placeholder="FEN" />
         </Form.Item>
         <Form.Item
-          {...field}
+          {...restField}
           name={[field.name, 'description']}
           style={{ width: '100%' }}
         >
@@ -89,8 +91,9 @@ function App() {
   const onDragEnd = ({ active, over }) => {
     if (active && over && active.id !== over.id) {
       const diagrams = form.getFieldValue('diagrams') || [];
-      const oldIndex = diagrams.findIndex((item) => item.id === active.id);
-      const newIndex = diagrams.findIndex((item) => item.id === over.id);
+      const getId = (item, index) => item?.id || `field-${index}`;
+      const oldIndex = diagrams.findIndex((item, i) => getId(item, i) === active.id);
+      const newIndex = diagrams.findIndex((item, i) => getId(item, i) === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
         const newDiagrams = arrayMove(diagrams, oldIndex, newIndex);
         form.setFieldsValue({ diagrams: newDiagrams });
@@ -236,17 +239,18 @@ function App() {
                         <>
                           <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
                             <SortableContext
-                              items={form.getFieldValue('diagrams')?.map(i => i.id) || []}
+                              items={(form.getFieldValue('diagrams') || []).map((d, i) => d?.id || `field-${i}`)}
                               strategy={rectSwappingStrategy}
                             >
                               <Row gutter={[16, 0]}>
-                                {visibleFields.map((field, index) => {
-                                  const diagram = form.getFieldValue('diagrams')[index];
+                                {visibleFields.map((field) => {
+                                  const diagrams = form.getFieldValue('diagrams') || [];
+                                  const diagram = diagrams[field.name];
+                                  const itemId = diagram?.id || `field-${field.name}`;
                                   return (
-                                    <Col xs={24} lg={12} key={field.key}>
+                                    <Col xs={24} lg={12} key={itemId}>
                                       <DraggableItem
-                                        key={diagram?.id}
-                                        id={diagram?.id}
+                                        id={itemId}
                                         field={field}
                                         remove={remove}
                                       />
