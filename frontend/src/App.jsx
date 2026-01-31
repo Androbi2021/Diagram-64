@@ -118,7 +118,16 @@ function App() {
 
     const getColorString = (colorValue) => {
       if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
-        return colorValue.toHexString();
+        const hex = colorValue.toHexString();
+        // Strip alpha channel: convert #rrggbbaa to #rrggbb
+        if (hex.length === 9 && hex.startsWith('#')) {
+          return hex.slice(0, 7);
+        }
+        return hex;
+      }
+      // Handle string values that may already have alpha
+      if (typeof colorValue === 'string' && colorValue.length === 9 && colorValue.startsWith('#')) {
+        return colorValue.slice(0, 7);
       }
       return colorValue;
     };
@@ -209,9 +218,9 @@ function App() {
                     diagrams: [{ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', description: 'Initial position', id: 'initial-0' }],
                     diagramsPerPage: 6,
                     padding: 2.5,
-                    lightSquares: '#ffffffff',
-                    darkSquares: '#878787ff',
-                    borderColor: '#ffffffff',
+                    lightSquares: '#ffffff',
+                    darkSquares: '#878787',
+                    borderColor: '#ffffff',
                     singleColumn: 1,
                     twoColumnMax: 8,
                     showTurnIndicator: true,

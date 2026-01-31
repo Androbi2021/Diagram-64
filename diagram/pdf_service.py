@@ -110,7 +110,7 @@ def create_pdf_from_fens(
             fen = fen_obj['fen']
             description = fen_obj.get('description')
 
-            drawing = fen_to_drawing(fen, board_colors, show_turn_indicator)
+            drawing = fen_to_drawing(fen, board_colors, show_turn_indicator, show_coordinates)
 
             item_story = []
             if drawing:
