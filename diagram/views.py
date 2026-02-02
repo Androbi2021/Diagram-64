@@ -43,15 +43,15 @@ class GeneratePdfApiView(APIView):
 
         try:
             pdf_data = create_pdf_from_fens(
-                fens,
-                diagrams_per_page,
-                padding,
-                board_colors,
-                columns_for_diagrams_per_page,
-                title if title != '' else None,
-                show_turn_indicator,
-                show_page_numbers,
-                show_coordinates
+                fens=fens,
+                diagrams_per_page=diagrams_per_page,
+                padding=padding,
+                board_colors=board_colors,
+                columns_for_diagrams_per_page=columns_for_diagrams_per_page,
+                title=title if title != '' else None,
+                show_turn_indicator=show_turn_indicator,
+                show_page_numbers=show_page_numbers,
+                show_coordinates=show_coordinates
             )
 
             response = HttpResponse(pdf_data, content_type='application/pdf')
