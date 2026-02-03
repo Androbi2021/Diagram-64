@@ -82,11 +82,14 @@ function App() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [importText, setImportText] = useState('');
   const [isListExpanded, setIsListExpanded] = useState(false);
-  const INITIAL_VISIBLE_COUNT = 4; // Number of items to show when collapsed
+  const INITIAL_VISIBLE_COUNT = 4;
 
   const [form] = Form.useForm();
   const nextId = useRef(0);
   const sensors = useSensors(useSensor(PointerSensor));
+
+  // Hook to watch the value of the 'showCoordinates' checkbox
+  const showCoordinates = Form.useWatch('showCoordinates', form);
 
   const onDragEnd = ({ active, over }) => {
     if (active && over && active.id !== over.id) {
@@ -146,6 +149,7 @@ function App() {
         dark_squares: getColorString(values.darkSquares),
         border_color: getColorString(values.borderColor),
       },
+      
       columns_for_diagrams_per_page: {
         single_column: values.singleColumn,
         two_column_max: values.twoColumnMax,
@@ -207,193 +211,205 @@ function App() {
       <Content style={{ padding: '24px' }}>
         <Row justify="center">
           <Col xs={24} sm={20} md={20} lg={20} xl={20}>
-            <Card>
-              <Spin spinning={loading} tip="Generating PDF...">
-                <Form
-                  form={form}
-                  layout="vertical"
-                  onFinish={handleGeneratePdf}
-                  initialValues={{
-                    title: '',
-                    diagrams: [{ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', description: 'Initial position', id: 'initial-0' }],
-                    diagramsPerPage: 6,
-                    padding: 2.5,
-                    lightSquares: '#ffffff',
-                    darkSquares: '#878787',
-                    borderColor: '#ffffff',
-                    singleColumn: 1,
-                    twoColumnMax: 8,
-                    showTurnIndicator: true,
-                    showPageNumbers: true,
-                    showCoordinates: false,
-                  }}
-                >
-                  <Form.Item
-                    name="title"
-                    label="Enter the title of your PDF (facultative):"
-                    rules={[{ required: false}]}
-                  >
-                    <TextArea
-                      rows={1}
-                      placeholder="My PDF title"
-                      style={{ fontFamily: "Arial" }}
-                    />
-                  </Form.Item>
+            <Spin spinning={loading} tip="Generating PDF...">
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={handleGeneratePdf}
+                initialValues={{
+                  title: '',
+                  diagrams: [{ fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', description: 'Initial position', id: 'initial-0' }],
+                  diagramsPerPage: 6,
+                  padding: 2.5,
+                  lightSquares: '#ffffffff',
+                  darkSquares: '#878787',
+                  borderColor: '#ecececff',
+                  singleColumn: 1,
+                  twoColumnMax: 8,
+                  showTurnIndicator: true,
+                  showPageNumbers: true,
+                  showCoordinates: false,
+                }}
+              >
+                <Row gutter={24}>
+                  {/* Main Content Column */}
+                  <Col xs={24} lg={16}>
+                    <Card>
+                      <Form.Item
+                        name="title"
+                        label="Enter the title of your PDF (facultative):"
+                        rules={[{ required: false}]}
+                      >
+                        <TextArea
+                          rows={1}
+                          placeholder="My PDF title"
+                          style={{ fontFamily: "Arial" }}
+                        />
+                      </Form.Item>
 
-                  <Form.List name="diagrams">
-                    {(fields, { add, remove }) => {
-                      const visibleFields = isListExpanded ? fields : fields.slice(0, INITIAL_VISIBLE_COUNT);
+                      <Form.List name="diagrams">
+                        {(fields, { add, remove }) => {
+                          const visibleFields = isListExpanded ? fields : fields.slice(0, INITIAL_VISIBLE_COUNT);
 
-                      return (
-                        <>
-                          <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
-                            <SortableContext
-                              items={(form.getFieldValue('diagrams') || []).map((d, i) => d?.id || `field-${i}`)}
-                              strategy={rectSwappingStrategy}
-                            >
-                              <Row gutter={[16, 0]}>
-                                {visibleFields.map((field) => {
-                                  const diagrams = form.getFieldValue('diagrams') || [];
-                                  const diagram = diagrams[field.name];
-                                  const itemId = diagram?.id || `field-${field.name}`;
-                                  return (
-                                    <Col xs={24} lg={12} key={itemId}>
-                                      <DraggableItem
-                                        id={itemId}
-                                        field={field}
-                                        remove={remove}
-                                      />
-                                    </Col>
-                                  );
-                                })}
-                              </Row>
-                            </SortableContext>
-                          </DndContext>
+                          return (
+                            <>
+                              <DndContext sensors={sensors} onDragEnd={onDragEnd} collisionDetection={closestCenter}>
+                                <SortableContext
+                                  items={form.getFieldValue('diagrams')?.map(i => i.id) || []}
+                                  strategy={rectSwappingStrategy}
+                                >
+                                  <Row gutter={[16, 0]}>
+                                    {visibleFields.map((field, index) => {
+                                      const diagram = form.getFieldValue('diagrams')[index];
+                                      return (
+                                        <Col xs={24} lg={12} key={field.key}>
+                                          <DraggableItem
+                                            key={diagram?.id}
+                                            id={diagram?.id}
+                                            field={field}
+                                            remove={remove}
+                                          />
+                                        </Col>
+                                      );
+                                    })}
+                                  </Row>
+                                </SortableContext>
+                              </DndContext>
 
-                          {fields.length > INITIAL_VISIBLE_COUNT && (
-                            <Button
-                              type="link"
-                              onClick={() => setIsListExpanded(!isListExpanded)}
-                              style={{ paddingLeft: 0, marginTop: 8 }}
-                            >
-                              {isListExpanded ? 'Afficher moins' : `Afficher les ${fields.length - INITIAL_VISIBLE_COUNT} autres...`}
-                            </Button>
-                          )}
+                              {fields.length > INITIAL_VISIBLE_COUNT && (
+                                <Button
+                                  type="link"
+                                  onClick={() => setIsListExpanded(!isListExpanded)}
+                                  style={{ paddingLeft: 0, marginTop: 8 }}
+                                >
+                                  {isListExpanded ? 'Afficher moins' : `Afficher les ${fields.length - INITIAL_VISIBLE_COUNT} autres...`}
+                                </Button>
+                              )}
 
-                          <Form.Item style={{ marginTop: '16px' }}>
-                            <Space>
-                              <Button
-                                type="dashed"
-                                onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
-                                icon={<PlusOutlined />}
-                              >
-                                Add Diagram
-                              </Button>
-                              <Button onClick={() => setIsModalVisible(true)}>
-                                Import from Text
-                              </Button>
-                            </Space>
+                              <Form.Item style={{ marginTop: '16px' }}>
+                                <Space>
+                                  <Button
+                                    type="dashed"
+                                    onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
+                                    icon={<PlusOutlined />}
+                                  >
+                                    Add Diagram
+                                  </Button>
+                                  <Button onClick={() => setIsModalVisible(true)}>
+                                    Import from Text
+                                  </Button>
+                                </Space>
+                              </Form.Item>
+                            </>
+                          );
+                        }}
+                      </Form.List>
+                    </Card>
+                  </Col>
+
+                  {/* Options Column */}
+                  <Col xs={24} lg={8}>
+                    <Card title="Options">
+                      <Row gutter={16}>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="diagramsPerPage" label="Diagrams per page:" rules={[{ required: true }]}>
+                            <InputNumber min={1} style={{ width: '100%' }} />
                           </Form.Item>
-                        </>
-                      );
-                    }}
-                  </Form.List>
+                        </Col>
+                        <Col xs={24} sm={12}>
+                          <Form.Item name="padding" label="Space between (pt):" rules={[{ required: true }]}>
+                            <InputNumber min={0} style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
 
-                  <Modal
-                    title="Import Diagrams"
-                    open={isModalVisible}
-                    onOk={() => {
-                      const lines = importText.split('\n').filter(line => line.trim() !== '');
-                      const newDiagrams = lines.map((line) => {
-                        const parts = line.split(/ \/\/ (.*)/s);
-                        return {
-                          fen: parts[0],
-                          description: parts[1] || '',
-                          id: `imported-${nextId.current++}`,
-                        };
-                      });
-                      form.setFieldsValue({ diagrams: newDiagrams });
-                      setIsModalVisible(false);
-                      setImportText('');
-                    }}
-                    onCancel={() => setIsModalVisible(false)}
-                  >
-                    <TextArea
-                      rows={10}
-                      placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // Anand vs Carlsen, 2013"
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                      style={{ fontFamily: "'Courier New', Courier, monospace" }}
-                    />
-                  </Modal>
+                      <Row gutter={16}>
+                        <Col xs={8}>
+                          <Form.Item name="lightSquares" label="Light squares">
+                            <ColorPicker showText />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={8}>
+                          <Form.Item name="darkSquares" label="Dark squares">
+                            <ColorPicker showText />
+                          </Form.Item>
+                        </Col>
+                        {/* Conditional rendering for Border Color */}
+                        {showCoordinates && (
+                          <Col xs={8}>
+                            <Form.Item name="borderColor" label="Coordinate Border">
+                              <ColorPicker showText />
+                            </Form.Item>
+                          </Col>
+                        )}
+                      </Row>
+                      
+                      <Typography.Text strong>Column Layout Rules</Typography.Text>
+                      <Row gutter={16}>
+                        <Col span={12}>
+                          <Form.Item name="singleColumn" label="Single col if ≤" tooltip="Max diagrams for a single-column layout.">
+                            <InputNumber min={1} style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item name="twoColumnMax" label="Two cols if ≤" tooltip="Max diagrams for a two-column layout.">
+                            <InputNumber min={1} style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
 
-                  <Row gutter={16}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item name="diagramsPerPage" label="Diagrams per page:" rules={[{ required: true }]}>
-                        <InputNumber min={1} style={{ width: '100%' }} />
+                      <Form.Item name="showTurnIndicator" valuePropName="checked">
+                        <Checkbox>Show turn indicator for Black</Checkbox>
                       </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item name="padding" label="Space between diagrams (pt):" rules={[{ required: true }]}>
-                        <InputNumber min={0} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
 
-                  <Row gutter={16}>
-                    <Col xs={8}>
-                      <Form.Item name="lightSquares" label="Light squares">
-                        <ColorPicker showText />
+                      <Form.Item name="showPageNumbers" valuePropName="checked">
+                        <Checkbox>Show page numbers</Checkbox>
                       </Form.Item>
-                    </Col>
-                    <Col xs={8}>
-                      <Form.Item name="darkSquares" label="Dark squares">
-                        <ColorPicker showText />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={8}>
-                      <Form.Item name="borderColor" label="Border">
-                        <ColorPicker showText />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  
-                  <Typography.Text strong>Column Layout Rules</Typography.Text>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item name="singleColumn" label="Single column if ≤" tooltip="Max diagrams for a single-column layout.">
-                        <InputNumber min={1} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item name="twoColumnMax" label="Two columns if ≤" tooltip="Max diagrams for a two-column layout.">
-                        <InputNumber min={1} style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
 
-                  <Form.Item name="showTurnIndicator" valuePropName="checked" style={{ marginTop: '16px' }}>
-                    <Checkbox>Show turn indicator for Black</Checkbox>
-                  </Form.Item>
+                      <Form.Item name="showCoordinates" valuePropName="checked">
+                        <Checkbox>Show Coordinates</Checkbox>
+                      </Form.Item>
 
-                  <Form.Item name="showPageNumbers" valuePropName="checked" style={{ marginTop: '16px' }}>
-                    <Checkbox>Show page numbers</Checkbox>
-                  </Form.Item>
-
-                  <Form.Item name="showCoordinates" valuePropName="checked" style={{ marginTop: '16px' }}>
-                    <Checkbox>Show Coordinates</Checkbox>
-                  </Form.Item>
-
-                  <Form.Item style={{ marginTop: '24px' }}>
-                    <Button type="primary" htmlType="submit" block loading={loading} size="large">
-                      Generate PDF
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Spin>
-            </Card>
+                      <Form.Item style={{ marginTop: '24px' }}>
+                        <Button type="primary" htmlType="submit" block loading={loading} size="large">
+                          Generate PDF
+                        </Button>
+                      </Form.Item>
+                    </Card>
+                  </Col>
+                </Row>
+              </Form>
+            </Spin>
           </Col>
         </Row>
+        <Modal
+            title="Import Diagrams"
+            open={isModalVisible}
+            onOk={() => {
+              const lines = importText.split('\n').filter(line => line.trim() !== '');
+              const newDiagrams = lines.map((line) => {
+                const parts = line.split(/ \/\/ (.*)/s);
+                return {
+                  fen: parts[0],
+                  description: parts[1] || '',
+                  id: `imported-${nextId.current++}`,
+                };
+              });
+              const currentDiagrams = form.getFieldValue('diagrams') || [];
+              form.setFieldsValue({ diagrams: [...currentDiagrams, ...newDiagrams] });
+              setIsModalVisible(false);
+              setImportText('');
+            }}
+            onCancel={() => setIsModalVisible(false)}
+          >
+            <TextArea
+              rows={10}
+              placeholder="e.g., rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // Anand vs Carlsen, 2013"
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              style={{ fontFamily: "'Courier New', Courier, monospace" }}
+            />
+        </Modal>
       </Content>
     </Layout>
   );

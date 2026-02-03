@@ -76,17 +76,20 @@ def create_pdf_from_fens(
     for group in fen_groups:
         col_width = page_width / cols
         max_desc_height = 0
-        
+        centered_normal = ParagraphStyle(
+            name='CenteredNormal',
+            fontName='Times-Roman',
+            parent=styles['Normal'],
+            alignment=1  # 1 = TA_CENTER
+        )
         # Determine the maximum description height for the current group
-        for fen_obj in group:
-            description = fen_obj.get('description')
+        for fen_item in group:
+            # Support both dict objects with 'description' and raw FEN strings
+            if isinstance(fen_item, dict):
+                description = fen_item.get('description')
+            else:
+                description = None
             if description:
-                centered_normal = ParagraphStyle(
-                    name='CenteredNormal',
-                    fontName='Times-Roman',
-                    parent=styles['Normal'],
-                    alignment=1  # 1 = TA_CENTER
-                )
                 p = Paragraph(description, centered_normal)
                 # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
                 _w, h = p.wrap(col_width, page_height)
@@ -106,11 +109,18 @@ def create_pdf_from_fens(
         table_data = []
         row_data = []
         
-        for i, fen_obj in enumerate(group):
-            fen = fen_obj['fen']
-            description = fen_obj.get('description')
+        for i, fen_item in enumerate(group):
+            # Support both dict objects with 'fen' and raw FEN strings
+            if isinstance(fen_item, dict):
+                fen = fen_item.get('fen')
+                description = fen_item.get('description')
+            else:
+                fen = fen_item
+                description = None
 
-            drawing = fen_to_drawing(fen, board_colors, show_turn_indicator, show_coordinates)
+            # Prepare board_colors, merging the new border_color if provided
+            current_board_colors = dict(board_colors or {})
+            drawing = fen_to_drawing(fen, current_board_colors, show_turn_indicator, show_coordinates)
 
             item_story = []
             if drawing:
