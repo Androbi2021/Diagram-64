@@ -97,7 +97,7 @@ Follow these instructions to set up the project for development.
 
 1.  **In a new terminal**, navigate to the frontend project directory:
     ```bash
-    cd chess_pdf_generator/frontend
+    cd frontend
     ```
 
 2.  **Install Node.js dependencies:**
