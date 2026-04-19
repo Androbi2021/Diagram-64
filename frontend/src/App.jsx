@@ -17,7 +17,7 @@ import {
   Modal,
   Space,
 } from 'antd';
-import { MinusCircleOutlined, PlusOutlined, HolderOutlined } from '@ant-design/icons';
+import { MinusCircleOutlined, PlusOutlined, HolderOutlined, DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -86,6 +86,7 @@ function App() {
 
   const [form] = Form.useForm();
   const nextId = useRef(0);
+  const fileInputRef = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor));
 
   // Hook to watch the value of the 'showCoordinates' checkbox
@@ -102,6 +103,78 @@ function App() {
         form.setFieldsValue({ diagrams: newDiagrams });
       }
     }
+  };
+
+  const handleExportJson = () => {
+    const values = form.getFieldsValue();
+    
+    // Normalize color values to hex strings
+    const normalizeColor = (color) => {
+      if (color && typeof color === 'object' && color.toHexString) {
+        return color.toHexString();
+      }
+      return color;
+    };
+
+    const exportData = {
+      ...values,
+      lightSquares: normalizeColor(values.lightSquares),
+      darkSquares: normalizeColor(values.darkSquares),
+      borderColor: normalizeColor(values.borderColor),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'diagrams_config.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    notification.success({
+      message: 'Export Successful',
+      description: 'Your configuration has been downloaded.',
+    });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        if (json && typeof json === 'object') {
+          // Special care for IDs in diagrams if they are missing or if we want to ensure uniqueness
+          if (Array.isArray(json.diagrams)) {
+            json.diagrams = json.diagrams.map((d, i) => ({
+              ...d,
+              id: d.id || `imported-${Date.now()}-${i}`
+            }));
+          }
+          
+          form.setFieldsValue(json);
+          notification.success({
+            message: 'Import Successful',
+            description: 'Your configuration has been loaded.',
+          });
+        }
+      } catch (err) {
+        notification.error({
+          message: 'Import Error',
+          description: 'Failed to parse JSON file.',
+        });
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset for next time
   };
 
   const handleGeneratePdf = async (values) => {
@@ -287,7 +360,7 @@ function App() {
                               )}
 
                               <Form.Item style={{ marginTop: '16px' }}>
-                                <Space>
+                                <Space wrap>
                                   <Button
                                     type="dashed"
                                     onClick={() => add({ fen: '', description: '', id: `new-${nextId.current++}` })}
@@ -298,8 +371,21 @@ function App() {
                                   <Button onClick={() => setIsModalVisible(true)}>
                                     Import from Text
                                   </Button>
+                                  <Button onClick={handleExportJson} icon={<DownloadOutlined />}>
+                                    Export Configuration
+                                  </Button>
+                                  <Button onClick={handleImportClick} icon={<UploadOutlined />}>
+                                    Import Configuration
+                                  </Button>
                                 </Space>
                               </Form.Item>
+                              <input
+                                type="file"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                accept=".json"
+                                onChange={handleFileChange}
+                              />
                             </>
                           );
                         }}
