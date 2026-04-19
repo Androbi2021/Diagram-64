@@ -35,6 +35,8 @@ const fenRegex = /^([rnbqkpRNBQKP1-8]{1,8}\/){7}[rnbqkpRNBQKP1-8]{1,8} [bw] (K?Q
 
 const DraggableItem = ({ id, field, remove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  // Destructure key out to avoid spreading it into JSX (React 19 requirement)
+  const { key: _key, ...restField } = field;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +51,7 @@ const DraggableItem = ({ id, field, remove }) => {
           <HolderOutlined />
         </span>
         <Form.Item
-          {...field}
+          {...restField}
           name={[field.name, 'fen']}
           rules={[
             { required: true, message: 'Missing FEN' },
@@ -63,7 +65,7 @@ const DraggableItem = ({ id, field, remove }) => {
           <Input placeholder="FEN" />
         </Form.Item>
         <Form.Item
-          {...field}
+          {...restField}
           name={[field.name, 'description']}
           style={{ width: '100%' }}
         >
@@ -92,8 +94,9 @@ function App() {
   const onDragEnd = ({ active, over }) => {
     if (active && over && active.id !== over.id) {
       const diagrams = form.getFieldValue('diagrams') || [];
-      const oldIndex = diagrams.findIndex((item) => item.id === active.id);
-      const newIndex = diagrams.findIndex((item) => item.id === over.id);
+      const getId = (item, index) => item?.id || `field-${index}`;
+      const oldIndex = diagrams.findIndex((item, i) => getId(item, i) === active.id);
+      const newIndex = diagrams.findIndex((item, i) => getId(item, i) === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
         const newDiagrams = arrayMove(diagrams, oldIndex, newIndex);
         form.setFieldsValue({ diagrams: newDiagrams });
@@ -118,7 +121,16 @@ function App() {
 
     const getColorString = (colorValue) => {
       if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
-        return colorValue.toHexString();
+        const hex = colorValue.toHexString();
+        // Strip alpha channel: convert #rrggbbaa to #rrggbb
+        if (hex.length === 9 && hex.startsWith('#')) {
+          return hex.slice(0, 7);
+        }
+        return hex;
+      }
+      // Handle string values that may already have alpha
+      if (typeof colorValue === 'string' && colorValue.length === 9 && colorValue.startsWith('#')) {
+        return colorValue.slice(0, 7);
       }
       return colorValue;
     };
