@@ -49,6 +49,11 @@ To quickly start the application for development, you can use the provided scrip
 
 The servers will run in the background. To view logs, you can check `/tmp/backend.log` and `/tmp/frontend.log`.
 
+> **Using a different backend port:** If port `8000` is already taken, set the `BACKEND_PORT` environment variable before running the script. Both the Django server and the frontend's Vite proxy read it, so they stay in sync:
+> ```bash
+> BACKEND_PORT=8001 ./start_servers.sh
+> ```
+
 ## Setup and Installation
 
 Follow these instructions to set up the project for development.
@@ -92,6 +97,15 @@ Follow these instructions to set up the project for development.
     python manage.py runserver
     ```
     The backend API will be running at `http://localhost:8000`.
+
+    To use a different port (e.g. if `8000` is busy), pass it as an argument:
+    ```bash
+    python manage.py runserver 8001
+    ```
+    When running the frontend separately, set the matching `BACKEND_PORT` so its proxy points to the right place:
+    ```bash
+    BACKEND_PORT=8001 npm run dev
+    ```
 
 ### Frontend Setup
 
