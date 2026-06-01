@@ -33,6 +33,38 @@ const { TextArea } = Input;
 
 const fenRegex = /^([rnbqkpRNBQKP1-8]{1,8}\/){7}[rnbqkpRNBQKP1-8]{1,8} [bw] (K?Q?k?q?|-) (-|[a-h][36]) \d+ \d+$/;
 
+// Save/Load file format
+const SAVE_VERSION = 1;
+const OPTION_KEYS = [
+  'diagramsPerPage',
+  'padding',
+  'lightSquares',
+  'darkSquares',
+  'borderColor',
+  'singleColumn',
+  'twoColumnMax',
+  'showTurnIndicator',
+  'showPageNumbers',
+  'showCoordinates',
+];
+const COLOR_KEYS = ['lightSquares', 'darkSquares', 'borderColor'];
+
+// ColorPicker values may be Color objects at runtime; normalize to a hex string.
+const getColorString = (colorValue) => {
+  if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
+    return colorValue.toHexString();
+  }
+  return colorValue;
+};
+
+// Derive a safe filename from the (optional) document title.
+const slugify = (text) =>
+  (text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const DraggableItem = ({ id, field, remove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
 
@@ -84,6 +116,7 @@ function App() {
 
   const [form] = Form.useForm();
   const nextId = useRef(0);
+  const fileInputRef = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor));
 
   // Hook to watch the value of the 'showCoordinates' checkbox
@@ -115,13 +148,6 @@ function App() {
     }
 
     setLoading(true);
-
-    const getColorString = (colorValue) => {
-      if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
-        return colorValue.toHexString();
-      }
-      return colorValue;
-    };
 
     const payload = {
       fens: fenData,
@@ -189,6 +215,113 @@ function App() {
     }
   };
 
+  // Save the whole document (title + options + diagrams) as a downloadable JSON file.
+  const handleSave = () => {
+    try {
+      // getFieldsValue(true) also returns values whose fields aren't currently mounted,
+      // so borderColor survives even when "Show Coordinates" is off.
+      const values = form.getFieldsValue(true);
+
+      const options = {};
+      OPTION_KEYS.forEach((key) => {
+        options[key] = COLOR_KEYS.includes(key) ? getColorString(values[key]) : values[key];
+      });
+
+      const diagrams = (values.diagrams || []).map(({ fen, description }) => ({
+        fen,
+        description: description || '',
+      }));
+
+      const data = { version: SAVE_VERSION, title: values.title || '', options, diagrams };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const fileURL = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = fileURL;
+      link.setAttribute('download', `${slugify(values.title) || 'chess_diagrams'}.json`);
+      document.body.appendChild(link);
+      link.click();
+
+      link.parentNode.removeChild(link);
+      URL.revokeObjectURL(fileURL);
+
+      notification.success({
+        message: 'Saved',
+        description: 'Your work has been saved to a JSON file.',
+      });
+    } catch (err) {
+      notification.error({
+        message: 'Save Failed',
+        description: err.message || 'Could not save the file.',
+      });
+    }
+  };
+
+  // Load a previously saved JSON file and repopulate the form.
+  const handleLoad = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let data;
+      try {
+        data = JSON.parse(e.target.result);
+      } catch {
+        notification.error({
+          message: 'Load Failed',
+          description: 'Could not read file: not valid JSON.',
+        });
+        return;
+      }
+
+      if (!data || !Array.isArray(data.diagrams)) {
+        notification.error({
+          message: 'Load Failed',
+          description: 'This file does not look like a saved Diagram 64 document.',
+        });
+        return;
+      }
+
+      if (data.version !== SAVE_VERSION) {
+        notification.warning({
+          message: 'Unknown file version',
+          description: 'Attempting a best-effort load; some settings may not apply.',
+        });
+      }
+
+      // Regenerate ids (the saved file omits them) following the existing import convention.
+      const diagrams = data.diagrams.map((d) => ({
+        fen: d?.fen || '',
+        description: d?.description || '',
+        id: `imported-${nextId.current++}`,
+      }));
+
+      // The form uses flat keys, so spread the nested options back out.
+      form.setFieldsValue({
+        title: data.title || '',
+        ...(data.options || {}),
+        diagrams,
+      });
+
+      notification.success({
+        message: 'Loaded',
+        description: 'Your saved document has been loaded.',
+      });
+    };
+    reader.onerror = () => {
+      notification.error({
+        message: 'Load Failed',
+        description: 'Could not read the selected file.',
+      });
+    };
+    reader.readAsText(file);
+
+    // Reset so selecting the same file again still fires onChange.
+    event.target.value = '';
+  };
+
   return (
     <Layout style={{ minHeight: '100vh', background: '#e4e1e1ff' }}>
       <Header style={{ background: '#0d5ba5ff', padding: '0 24px' }}>
@@ -250,9 +383,8 @@ function App() {
                                     {visibleFields.map((field, index) => {
                                       const diagram = form.getFieldValue('diagrams')[index];
                                       return (
-                                        <Col xs={24} lg={12} key={field.key}>
+                                        <Col xs={24} lg={12} key={diagram?.id ?? `field-${field.key}`}>
                                           <DraggableItem
-                                            key={diagram?.id}
                                             id={diagram?.id}
                                             field={field}
                                             remove={remove}
@@ -286,6 +418,19 @@ function App() {
                                   <Button onClick={() => setIsModalVisible(true)}>
                                     Import from Text
                                   </Button>
+                                  <Button onClick={handleSave}>
+                                    Save
+                                  </Button>
+                                  <Button onClick={() => fileInputRef.current?.click()}>
+                                    Load
+                                  </Button>
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="application/json,.json"
+                                    style={{ display: 'none' }}
+                                    onChange={handleLoad}
+                                  />
                                 </Space>
                               </Form.Item>
                             </>
