@@ -33,6 +33,47 @@ const { TextArea } = Input;
 
 const fenRegex = /^([rnbqkpRNBQKP1-8]{1,8}\/){7}[rnbqkpRNBQKP1-8]{1,8} [bw] (K?Q?k?q?|-) (-|[a-h][36]) \d+ \d+$/;
 
+// Save/Load file format
+const SAVE_VERSION = 1;
+const OPTION_KEYS = [
+  'diagramsPerPage',
+  'padding',
+  'lightSquares',
+  'darkSquares',
+  'borderColor',
+  'singleColumn',
+  'twoColumnMax',
+  'showTurnIndicator',
+  'showPageNumbers',
+  'showCoordinates',
+];
+const COLOR_KEYS = ['lightSquares', 'darkSquares', 'borderColor'];
+
+// ColorPicker values may be Color objects at runtime; normalize to a hex string.
+const getColorString = (colorValue) => {
+  if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
+    const hex = colorValue.toHexString();
+    // Strip alpha channel: convert #rrggbbaa to #rrggbb
+    if (hex.length === 9 && hex.startsWith('#')) {
+      return hex.slice(0, 7);
+    }
+    return hex;
+  }
+  // Handle string values that may already have alpha
+  if (typeof colorValue === 'string' && colorValue.length === 9 && colorValue.startsWith('#')) {
+    return colorValue.slice(0, 7);
+  }
+  return colorValue;
+};
+
+// Derive a safe filename from the (optional) document title.
+const slugify = (text) =>
+  (text || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const DraggableItem = ({ id, field, remove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   // Destructure key out to avoid spreading it into JSX (React 19 requirement)
@@ -105,78 +146,6 @@ function App() {
     }
   };
 
-  const handleExportJson = () => {
-    const values = form.getFieldsValue();
-    
-    // Normalize color values to hex strings
-    const normalizeColor = (color) => {
-      if (color && typeof color === 'object' && color.toHexString) {
-        return color.toHexString();
-      }
-      return color;
-    };
-
-    const exportData = {
-      ...values,
-      lightSquares: normalizeColor(values.lightSquares),
-      darkSquares: normalizeColor(values.darkSquares),
-      borderColor: normalizeColor(values.borderColor),
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'diagrams_config.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    notification.success({
-      message: 'Export Successful',
-      description: 'Your configuration has been downloaded.',
-    });
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target.result);
-        if (json && typeof json === 'object') {
-          // Special care for IDs in diagrams if they are missing or if we want to ensure uniqueness
-          if (Array.isArray(json.diagrams)) {
-            json.diagrams = json.diagrams.map((d, i) => ({
-              ...d,
-              id: d.id || `imported-${Date.now()}-${i}`
-            }));
-          }
-          
-          form.setFieldsValue(json);
-          notification.success({
-            message: 'Import Successful',
-            description: 'Your configuration has been loaded.',
-          });
-        }
-      } catch (err) {
-        notification.error({
-          message: 'Import Error',
-          description: 'Failed to parse JSON file.',
-        });
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = ''; // Reset for next time
-  };
-
   const handleGeneratePdf = async (values) => {
     const fenData = values.diagrams
       .map(({ fen, description }) => ({ fen, description: description || '' }))
@@ -192,22 +161,6 @@ function App() {
 
     setLoading(true);
 
-    const getColorString = (colorValue) => {
-      if (typeof colorValue === 'object' && colorValue !== null && typeof colorValue.toHexString === 'function') {
-        const hex = colorValue.toHexString();
-        // Strip alpha channel: convert #rrggbbaa to #rrggbb
-        if (hex.length === 9 && hex.startsWith('#')) {
-          return hex.slice(0, 7);
-        }
-        return hex;
-      }
-      // Handle string values that may already have alpha
-      if (typeof colorValue === 'string' && colorValue.length === 9 && colorValue.startsWith('#')) {
-        return colorValue.slice(0, 7);
-      }
-      return colorValue;
-    };
-
     const payload = {
       fens: fenData,
       diagrams_per_page: values.diagramsPerPage,
@@ -222,7 +175,7 @@ function App() {
         dark_squares: getColorString(values.darkSquares),
         border_color: getColorString(values.borderColor),
       },
-      
+
       columns_for_diagrams_per_page: {
         single_column: values.singleColumn,
         two_column_max: values.twoColumnMax,
@@ -272,6 +225,113 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Save the whole document (title + options + diagrams) as a downloadable JSON file.
+  const handleSave = () => {
+    try {
+      // getFieldsValue(true) also returns values whose fields aren't currently mounted,
+      // so borderColor survives even when "Show Coordinates" is off.
+      const values = form.getFieldsValue(true);
+
+      const options = {};
+      OPTION_KEYS.forEach((key) => {
+        options[key] = COLOR_KEYS.includes(key) ? getColorString(values[key]) : values[key];
+      });
+
+      const diagrams = (values.diagrams || []).map(({ fen, description }) => ({
+        fen,
+        description: description || '',
+      }));
+
+      const data = { version: SAVE_VERSION, title: values.title || '', options, diagrams };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const fileURL = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = fileURL;
+      link.setAttribute('download', `${slugify(values.title) || 'chess_diagrams'}.json`);
+      document.body.appendChild(link);
+      link.click();
+
+      link.parentNode.removeChild(link);
+      URL.revokeObjectURL(fileURL);
+
+      notification.success({
+        message: 'Saved',
+        description: 'Your work has been saved to a JSON file.',
+      });
+    } catch (err) {
+      notification.error({
+        message: 'Save Failed',
+        description: err.message || 'Could not save the file.',
+      });
+    }
+  };
+
+  // Load a previously saved JSON file and repopulate the form.
+  const handleLoad = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let data;
+      try {
+        data = JSON.parse(e.target.result);
+      } catch {
+        notification.error({
+          message: 'Load Failed',
+          description: 'Could not read file: not valid JSON.',
+        });
+        return;
+      }
+
+      if (!data || !Array.isArray(data.diagrams)) {
+        notification.error({
+          message: 'Load Failed',
+          description: 'This file does not look like a saved Diagram 64 document.',
+        });
+        return;
+      }
+
+      if (data.version !== SAVE_VERSION) {
+        notification.warning({
+          message: 'Unknown file version',
+          description: 'Attempting a best-effort load; some settings may not apply.',
+        });
+      }
+
+      // Regenerate ids (the saved file omits them) following the existing import convention.
+      const diagrams = data.diagrams.map((d) => ({
+        fen: d?.fen || '',
+        description: d?.description || '',
+        id: `imported-${nextId.current++}`,
+      }));
+
+      // The form uses flat keys, so spread the nested options back out.
+      form.setFieldsValue({
+        title: data.title || '',
+        ...(data.options || {}),
+        diagrams,
+      });
+
+      notification.success({
+        message: 'Loaded',
+        description: 'Your saved document has been loaded.',
+      });
+    };
+    reader.onerror = () => {
+      notification.error({
+        message: 'Load Failed',
+        description: 'Could not read the selected file.',
+      });
+    };
+    reader.readAsText(file);
+
+    // Reset so selecting the same file again still fires onChange.
+    event.target.value = '';
   };
 
   return (
@@ -335,9 +395,8 @@ function App() {
                                     {visibleFields.map((field, index) => {
                                       const diagram = form.getFieldValue('diagrams')[index];
                                       return (
-                                        <Col xs={24} lg={12} key={field.key}>
+                                        <Col xs={24} lg={12} key={diagram?.id ?? `field-${field.key}`}>
                                           <DraggableItem
-                                            key={diagram?.id}
                                             id={diagram?.id}
                                             field={field}
                                             remove={remove}
@@ -371,21 +430,21 @@ function App() {
                                   <Button onClick={() => setIsModalVisible(true)}>
                                     Import from Text
                                   </Button>
-                                  <Button onClick={handleExportJson} icon={<DownloadOutlined />}>
-                                    Export Configuration
+                                  <Button onClick={handleSave} icon={<DownloadOutlined />}>
+                                    Save
                                   </Button>
-                                  <Button onClick={handleImportClick} icon={<UploadOutlined />}>
-                                    Import Configuration
+                                  <Button onClick={() => fileInputRef.current?.click()} icon={<UploadOutlined />}>
+                                    Load
                                   </Button>
+                                  <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="application/json,.json"
+                                    style={{ display: 'none' }}
+                                    onChange={handleLoad}
+                                  />
                                 </Space>
                               </Form.Item>
-                              <input
-                                type="file"
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                accept=".json"
-                                onChange={handleFileChange}
-                              />
                             </>
                           );
                         }}
@@ -429,7 +488,7 @@ function App() {
                           </Col>
                         )}
                       </Row>
-                      
+
                       <Typography.Text strong>Column Layout Rules</Typography.Text>
                       <Row gutter={16}>
                         <Col span={12}>
