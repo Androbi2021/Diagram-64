@@ -43,7 +43,9 @@ def create_pdf_from_fens(
             fontName='Times-Roman',
             fontSize=20,
             parent=styles['h1'],
-            alignment=1  # 1 = TA_CENTER
+            alignment=1,  # 1 = TA_CENTER
+            spaceBefore=0,  # rely solely on the manual Spacer below so the title's
+            spaceAfter=0,   # footprint equals h_title exactly (no hidden h1 spacing)
         )
         t = Paragraph(title, centered_h1)
         _w, h_title = t.wrap(page_width, page_height)
@@ -71,52 +73,70 @@ def create_pdf_from_fens(
     top_padding = table_padding.get('top', 5)
     bottom_padding = table_padding.get('bottom', 5)
 
-    is_first_page = True
+    # Layout geometry shared by every page.
+    col_width = page_width / cols
+    width_cap = page_width / cols - 20  # Ensure diagrams fit within the column width
+    number_of_rows = (diagrams_per_page + cols - 1) // cols  # ceil(diagrams_per_page / cols)
+    padding_before_desc = PDF_CONFIG.get('padding_before_desc')
+    # Slack reserved per page so a full grid never splits across pages: ReportLab's default
+    # Frame adds 6pt padding top and bottom (12pt total, not counted in doc.height), plus a
+    # few points for rounding.
+    PAGE_FILL_SAFETY = 16
 
-    for group in fen_groups:
-        col_width = page_width / cols
-        max_desc_height = 0
-        centered_normal = ParagraphStyle(
-            name='CenteredNormal',
-            fontName='Times-Roman',
-            parent=styles['Normal'],
-            alignment=1  # 1 = TA_CENTER
-        )
-        # Determine the maximum description height for the current group
-        for fen_item in group:
-            # Support both dict objects with 'description' and raw FEN strings
-            if isinstance(fen_item, dict):
-                description = fen_item.get('description')
-            else:
-                description = None
-            if description:
-                p = Paragraph(description, centered_normal)
-                # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
-                _w, h = p.wrap(col_width, page_height)
-                max_desc_height = max(max_desc_height, h)
-        
+    centered_normal = ParagraphStyle(
+        name='CenteredNormal',
+        fontName='Times-Roman',
+        parent=styles['Normal'],
+        alignment=1  # 1 = TA_CENTER
+    )
+
+    def description_of(fen_item):
+        # Support both dict objects with 'description' and raw FEN strings
+        if isinstance(fen_item, dict):
+            return fen_item.get('description')
+        return None
+
+    def description_height(fen_item):
+        description = description_of(fen_item)
+        if not description:
+            return 0
+        # Use wrap(), not wrapOn(), for measurement as the canvas is not available yet.
+        _w, h = Paragraph(description, centered_normal).wrap(col_width, page_height)
+        return h
+
+    # Compute a single diagram size from the most constrained page, then reuse it on every
+    # page so board size and the spacing between diagrams stay consistent across the whole
+    # document. The first page is the tightest when a title is present, and a page whose
+    # group holds the tallest caption is the tightest caption-wise; taking the minimum over
+    # all pages guarantees every page fits.
+    diagram_size = min(DIAGRAM_CONFIG['default_size'], width_cap)
+    for page_index, group in enumerate(fen_groups):
+        page_desc_height = max((description_height(item) for item in group), default=0)
         available_page_height = page_height
-        if is_first_page and title:
+        if page_index == 0 and title:
             available_page_height -= h_title
-            is_first_page = False
+        height_per_row = available_page_height / number_of_rows
+        diagram_height_max = height_per_row - page_desc_height - padding_before_desc - top_padding - bottom_padding - 6
+        diagram_size = min(diagram_size, diagram_height_max)
 
-        number_of_rows = (diagrams_per_page + cols - 1) // cols  # A formula to avoid calling math.ceil
-        available_height_for_content_per_row = available_page_height / number_of_rows
-        diagram_height_max = available_height_for_content_per_row - max_desc_height - PDF_CONFIG.get('padding_before_desc') - top_padding - bottom_padding -6
-
-        diagram_size = min(DIAGRAM_CONFIG['default_size'], page_width / cols - 20, diagram_height_max)  # Ensure diagrams fit within page width
+    for page_index, group in enumerate(fen_groups):
+        # Spread the rows to fill the page so every diagram gets an equal writing gap
+        # beneath it. Dividing by number_of_rows (the page capacity) rather than the actual
+        # row count keeps the rhythm identical on a partial last page. The title reduces the
+        # first page's height, so its gaps are slightly smaller than later pages'.
+        available_page_height = page_height
+        if page_index == 0 and title:
+            available_page_height -= h_title
+        # Leave a small slack so rounding never pushes the table past the frame, which would
+        # split a page's grid across two pages.
+        row_height = (available_page_height - PAGE_FILL_SAFETY) / number_of_rows
 
         table_data = []
         row_data = []
-        
+
         for i, fen_item in enumerate(group):
-            # Support both dict objects with 'fen' and raw FEN strings
-            if isinstance(fen_item, dict):
-                fen = fen_item.get('fen')
-                description = fen_item.get('description')
-            else:
-                fen = fen_item
-                description = None
+            fen = fen_item.get('fen') if isinstance(fen_item, dict) else fen_item
+            description = description_of(fen_item)
 
             # Prepare board_colors, merging the new border_color if provided
             current_board_colors = dict(board_colors or {})
@@ -129,9 +149,9 @@ def create_pdf_from_fens(
                 drawing.width = diagram_size
                 drawing.height = diagram_size
                 item_story.append(drawing)
-            
+
             if description:
-                item_story.append(Spacer(1, PDF_CONFIG.get('padding_before_desc')))
+                item_story.append(Spacer(1, padding_before_desc))
                 item_story.append(Paragraph(description, centered_normal))
 
             row_data.append(item_story)
@@ -141,13 +161,11 @@ def create_pdf_from_fens(
                 row_data = []
 
         if table_data:
-            content_height = diagram_size + max_desc_height + PDF_CONFIG.get('padding_before_desc')
-            row_height = content_height + top_padding + bottom_padding
-            
-            # Ensure all rows in the table have a consistent height
-            num_rows = len(table_data)
-            table = Table(table_data, colWidths=[col_width]*cols, rowHeights=[row_height]*num_rows)
-            
+            # Uniform tall rows + TOP alignment ⇒ the slack lands as an equal writing gap
+            # below each diagram (or below its caption).
+            row_heights = [row_height] * len(table_data)
+            table = Table(table_data, colWidths=[col_width]*cols, rowHeights=row_heights)
+
             table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('ALIGN', (0, 0), (-1, -1), TABLE_CONFIG['alignment']['horizontal']),

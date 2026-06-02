@@ -3,6 +3,11 @@
 # Exit on any error
 set -e
 
+# Port the backend (Django) listens on. Override with: BACKEND_PORT=8001 ./start_servers.sh
+# The frontend's Vite proxy reads the same variable, so both stay in sync automatically.
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+export BACKEND_PORT
+
 # --- Backend Setup ---
 echo "--- Setting up backend ---"
 python3 -m venv venv
@@ -10,7 +15,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 echo "--- Starting backend server ---"
 
-python manage.py runserver > /tmp/backend.log 2>&1 &
+echo "--- Backend will listen on port ${BACKEND_PORT} ---"
+python manage.py runserver "${BACKEND_PORT}" > /tmp/backend.log 2>&1 &
 
 # --- Frontend Setup ---
 echo "--- Setting up frontend ---"
